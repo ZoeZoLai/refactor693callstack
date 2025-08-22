@@ -34,9 +34,13 @@ function New-HealthCheckReport {
     try {
         Write-Verbose "Generating health check report..."
         
-        # Determine output path
+        # Determine output path with fallback to default
         if (-not $OutputPath) {
-            $OutputPath = $global:ESSConfig.ReportOutputPath
+            if ($global:ESSConfig -and $global:ESSConfig.ReportOutputPath) {
+                $OutputPath = $global:ESSConfig.ReportOutputPath
+            } else {
+                $OutputPath = Join-Path $PWD "Reports"
+            }
         }
         
         # Create output directory if it doesn't exist
@@ -44,12 +48,16 @@ function New-HealthCheckReport {
             New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
         }
         
-        # Generate report filename
-        $reportName = $global:ESSConfig.ReportNameFormat -f (Get-Date)
+        # Generate report filename with fallback to default
+        if ($global:ESSConfig -and $global:ESSConfig.ReportNameFormat) {
+            $reportName = $global:ESSConfig.ReportNameFormat -f (Get-Date)
+        } else {
+            $reportName = "ESS_HealthCheck_Report_{0:yyyyMMdd_HHmmss}.html" -f (Get-Date)
+        }
         $reportPath = Join-Path $OutputPath $reportName
         
         # Generate HTML content
-        $htmlContent = New-ReportHTML -Results $Results
+        $htmlContent = New-ReportHTML -Results $Results -SystemInfo $global:SystemInfo -DetectionResults $global:DetectionResults
         
         # Write report to file
         $htmlContent | Out-File -FilePath $reportPath -Encoding UTF8
@@ -69,20 +77,28 @@ function New-ReportHTML {
         Generates HTML content for the health check report
     .PARAMETER Results
         Array of health check results
+    .PARAMETER SystemInfo
+        System information hashtable
+    .PARAMETER DetectionResults
+        Detection results hashtable
     .RETURNS
         HTML content as string
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [array]$Results
+        [array]$Results,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$SystemInfo = $null,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$DetectionResults = $null
     )
 
-    $sysInfo = $global:SystemInfo
-    # $config = $global:ESSConfig
-    
-    # Get detection results for displaying all instances
-    $detectionResults = $global:DetectionResults
+    # Use provided parameters or fall back to global variables if available
+    $sysInfo = if ($SystemInfo) { $SystemInfo } else { $global:SystemInfo }
+    $detectionResults = if ($DetectionResults) { $DetectionResults } else { $global:DetectionResults }
     
 
     

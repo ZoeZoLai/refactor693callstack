@@ -3,31 +3,44 @@
     System requirements validation module
 .DESCRIPTION
     Validates system requirements for ESS upgrade including hardware, OS, and software requirements
+    Following call stack principles with dependency injection
 .NOTES
     Author: Zoe Lai
-    Date: 04/08/2025
-    Version: 1.0
+    Date: 30/07/2025
+    Version: 2.0
 #>
 
 function Test-SystemRequirements {
     <#
     .SYNOPSIS
         Tests system requirements for ESS upgrade
+    .DESCRIPTION
+        Validates system requirements using injected dependencies
+    .PARAMETER SystemInfo
+        System information object containing hardware, OS, and software details
+    .PARAMETER Configuration
+        Optional configuration object containing minimum requirements
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$SystemInfo,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$Configuration = $null
+    )
 
     Write-Verbose "Testing system requirements..."
     
-    $sysInfo = $global:SystemInfo
-    $config = $global:ESSConfig
+    # Use provided configuration or get default values
+    $config = if ($Configuration) { $Configuration } else { Get-ESSConfiguration }
     
     # Test disk space
-    $cDrive = $sysInfo.Hardware.LogicalDisks | Where-Object { $_.DeviceID -eq 'C:' } | Select-Object -First 1
+    $cDrive = $SystemInfo.Hardware.LogicalDisks | Where-Object { $_.DeviceID -eq "C:" } | Select-Object -First 1
     if ($cDrive) {
         $diskSpaceGB = $cDrive.Size
         $freeSpaceGB = $cDrive.FreeSpace
-        $requiredDiskSpace = $config.MinimumDiskSpaceGB
+        $requiredDiskSpace = $config.MinimumRequirements.MinimumDiskSpaceGB
         
         if ($freeSpaceGB -lt $requiredDiskSpace) {
             Add-HealthCheckResult -Category "System Requirements" -Check "Free Disk Space" -Status "FAIL" -Message "Insufficient disk space. Available: $freeSpaceGB (Total: $diskSpaceGB) GB - Required: $requiredDiskSpace GB"
@@ -39,8 +52,8 @@ function Test-SystemRequirements {
     }
     
     # Test memory
-    $totalMemory = $sysInfo.Hardware.TotalPhysicalMemory
-    $requiredMemory = $config.MinimumMemoryGB
+    $totalMemory = $SystemInfo.Hardware.TotalPhysicalMemory
+    $requiredMemory = $config.MinimumRequirements.MinimumMemoryGB
     
     if ($totalMemory -lt $requiredMemory) {
         Add-HealthCheckResult -Category "System Requirements" -Check "Memory" -Status "FAIL" -Message "Insufficient memory. Available: $totalMemory GB - Required: $requiredMemory GB"
@@ -49,8 +62,8 @@ function Test-SystemRequirements {
     }
     
     # Test CPU cores
-    $totalCores = $sysInfo.Hardware.TotalCores
-    $requiredCores = $config.MinimumCores
+    $totalCores = $SystemInfo.Hardware.TotalCores
+    $requiredCores = $config.MinimumRequirements.MinimumCores
     
     if ($totalCores -lt $requiredCores) {
         Add-HealthCheckResult -Category "System Requirements" -Check "CPU Cores" -Status "FAIL" -Message "Insufficient CPU cores. Available: $totalCores - Required: $requiredCores"
@@ -59,8 +72,8 @@ function Test-SystemRequirements {
     }
     
     # Test processor speed
-    $averageProcessorSpeed = $sysInfo.Hardware.AverageProcessorSpeedGHz
-    $requiredProcessorSpeed = $config.MinimumProcessorSpeedGHz
+    $averageProcessorSpeed = $SystemInfo.Hardware.AverageProcessorSpeedGHz
+    $requiredProcessorSpeed = $config.MinimumRequirements.MinimumProcessorSpeedGHz
     
     if ($averageProcessorSpeed -lt $requiredProcessorSpeed) {
         Add-HealthCheckResult -Category "System Requirements" -Check "Processor Speed" -Status "FAIL" -Message "Insufficient processor speed. Available: $averageProcessorSpeed GHz - Required: $requiredProcessorSpeed GHz"
@@ -69,9 +82,9 @@ function Test-SystemRequirements {
     }
     
     # Test IIS installation and version
-    if ($sysInfo.IIS.IsInstalled) {
-        $iisVersion = $sysInfo.IIS.Version
-        $requiredIISVersion = $config.RequiredIISVersion
+    if ($SystemInfo.IIS.IsInstalled) {
+        $iisVersion = $SystemInfo.IIS.Version
+        $requiredIISVersion = $config.MinimumRequirements.RequiredIISVersion
         
         # Parse version numbers for comparison
         $iisVersionParts = $iisVersion.Split('.')
@@ -90,8 +103,8 @@ function Test-SystemRequirements {
     }
     
     # Test .NET Framework version
-    $dotNetVersions = $sysInfo.Registry.DotNetVersions
-    $requiredDotNetVersion = $config.RequiredDotNetVersion
+    $dotNetVersions = $SystemInfo.Registry.DotNetVersions
+    $requiredDotNetVersion = $config.MinimumRequirements.RequiredDotNetVersion
     
     if ($dotNetVersions -and $dotNetVersions.Count -gt 0) {
         $highestDotNetVersion = $dotNetVersions | Sort-Object -Descending | Select-Object -First 1
@@ -113,9 +126,9 @@ function Test-SystemRequirements {
     }
     
     # Test OS version and type
-    $osCaption = $sysInfo.OS.Caption
-    $isServer = $sysInfo.OS.IsServer
-    $requiredOSVersions = $config.RequiredOSVersions
+    $osCaption = $SystemInfo.OS.Caption
+    $isServer = $SystemInfo.OS.IsServer
+    $requiredOSVersions = $config.MinimumRequirements.RequiredOSVersions
     
     if ($isServer) {
         # Check if server OS meets minimum requirements

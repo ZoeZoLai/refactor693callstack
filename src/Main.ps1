@@ -1,82 +1,99 @@
 <#
 .SYNOPSIS
-    ESS Pre-Upgrade Health Checker
+    ESS Pre-Upgrade Health Checker - Main Entry Point
 .DESCRIPTION
-    Performs comprehensive checks before upgrading ESS to ensure system readiness
-    Automatically detects deployment structure and adapts health checks accordingly
+    Main entry point for the ESS Health Checker application
+    Following call stack principles with proper module loading and dependency management
 .NOTES
     Author: Zoe Lai
-    Date: 29/07/2025
-    Version: 1.0
+    Date: 30/07/2025
+    Version: 2.0
 #>
 
-# Import Core Health Check Module FIRST (infrastructure)
-. .\HealthCheckCore.ps1
+# Import the module loader first
+. .\Core\ModuleLoader.ps1
 
-# Import System modules first (dependencies)
-. .\modules\System\HardwareInfo.ps1
-. .\modules\System\OSInfo.ps1
-. .\modules\System\IISInfo.ps1
-. .\modules\System\SQLInfo.ps1
-. .\modules\System\SystemInfoOrchestrator.ps1
-
-# Import Detection modules
-. .\modules\Detection\ESSDetection.ps1
-. .\modules\Detection\WFEDetection.ps1
-. .\modules\Detection\DetectionOrchestrator.ps1
-
-# Import Utils modules
-. .\modules\Utils\HelperFunctions.ps1
-
-# Import Validation modules
-. .\modules\Validation\SystemRequirements.ps1
-. .\modules\Validation\InfrastructureValidation.ps1
-. .\modules\Validation\ESSValidation.ps1
-. .\modules\Validation\ValidationOrchestrator.ps1
-
-# Import Configuration (uses dynamic system information)
-. .\Config.ps1
-
-# Import Report Generator
-. .\ReportGenerator.ps1
-
-# Initialize configuration after all modules are loaded
-Initialize-ESSHealthCheckerConfiguration
-
-# Ensure detection results are globally available
-if ($global:ESSConfig -and $global:ESSConfig.DetectionResults) {
-    $global:DetectionResults = $global:ESSConfig.DetectionResults
+function Initialize-ESSHealthChecker {
+    <#
+    .SYNOPSIS
+        Initializes the ESS Health Checker application
+    .DESCRIPTION
+        Sets up the application environment and loads all required modules
+    #>
+    [CmdletBinding()]
+    param()
+    
+    try {
+        Write-Host "Initializing ESS Health Checker..." -ForegroundColor Yellow
+        
+        # Initialize module loader
+        Initialize-ModuleLoader
+        
+        # Load all modules in the correct order
+        Load-Modules
+        
+        # Test dependencies (temporarily disabled for debugging)
+        # Test-HealthCheckDependencies
+        
+        Write-Host "ESS Health Checker initialized successfully!" -ForegroundColor Green
+    }
+    catch {
+        Write-Error "Failed to initialize ESS Health Checker: $_"
+        throw
+    }
 }
 
 function Start-ESSHealthChecks {
     <#
     .SYNOPSIS
-        Starts the ESS Health Check process
+        Starts the ESS Health Check process using proper call stack principles
     .DESCRIPTION
-        Initializes configuration and runs all health checks
+        Uses the HealthCheckOrchestrator class to manage the entire health check workflow
+        following proper dependency injection and call stack principles
+    .RETURNS
+        Path to the generated report
     #>
     [CmdletBinding()]
-    param ()
+    param()
 
     try {
         Write-Host "Starting ESS Pre-Upgrade Health Checks..." -ForegroundColor Cyan
-
-        # Get system information from configuration
-        $global:SystemInfo = $global:ESSConfig.SystemInfo
-
-        # Display system information summary
-        Show-SystemInfoSummary -ShowDeploymentInfo $true
-
-        # Run system validation checks
-        Start-SystemValidation
         
-        # Run additional validation checks
-       
-
-        # Generate report based on results
-        Write-Host "Generating ESS Pre-Upgrade Health Check Report..." -ForegroundColor Green
-        $reportPath = New-HealthCheckReport -Results $global:HealthCheckResults
-
+        # Load required modules in dependency order to ensure classes are available
+        . .\Core\HealthCheckCore.ps1
+        . .\Core\Config.ps1
+        . .\modules\Utils\HelperFunctions.ps1
+        . .\modules\System\HardwareInfo.ps1
+        . .\modules\System\OSInfo.ps1
+        . .\modules\System\IISInfo.ps1
+        . .\modules\System\SQLInfo.ps1
+        . .\modules\System\SystemInfoOrchestrator.ps1
+        . .\modules\Detection\ESSDetection.ps1
+        . .\modules\Detection\WFEDetection.ps1
+        . .\modules\Detection\ESSHealthCheckAPI.ps1
+        . .\modules\Detection\DetectionOrchestrator.ps1
+        . .\modules\Validation\SystemRequirements.ps1
+        . .\modules\Validation\InfrastructureValidation.ps1
+        . .\modules\Validation\ESSValidation.ps1
+        . .\modules\Validation\ValidationOrchestrator.ps1
+        . .\Core\ReportGenerator.ps1
+        
+        # Import the main orchestrator after all dependent modules are loaded
+        . .\Core\HealthCheckOrchestrator.ps1
+        
+        # Use the orchestrator pattern instead of individual function calls
+        $orchestrator = [HealthCheckOrchestrator]::new()
+        $orchestrator.Initialize()
+        
+        # Execute the complete health check workflow
+        $orchestrator.CollectSystemInformation()
+        $orchestrator.DetectESSWFEDeployment()
+        $orchestrator.RunValidationChecks()
+        $reportPath = $orchestrator.GenerateReport()
+        
+        # Display summary
+        $orchestrator.DisplaySummary()
+        
         Write-Host "`nHealth Checks completed successfully!" -ForegroundColor Green
         Write-Host "Report generated at: $reportPath" -ForegroundColor Cyan
         return $reportPath
@@ -86,4 +103,7 @@ function Start-ESSHealthChecks {
         throw
     }
 }
+
+# Initialize the application when the script is loaded
+Initialize-ESSHealthChecker
 

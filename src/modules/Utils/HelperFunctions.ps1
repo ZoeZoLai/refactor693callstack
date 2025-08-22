@@ -3,10 +3,11 @@
     Helper functions and utilities module
 .DESCRIPTION
     Contains utility functions used across the ESS Health Checker application
+    Following call stack principles with dependency injection
 .NOTES
     Author: Zoe Lai
-    Date: 07/08/2025
-    Version: 1.0
+    Date: 30/07/2025
+    Version: 2.0
 #>
 
 function Get-FormattedSiteIdentifier {
@@ -41,26 +42,27 @@ function Get-FormattedSiteIdentifier {
 function Get-AppPoolIdentity {
     <#
     .SYNOPSIS
-        Get application pool identity information.
+        Get application pool identity information
     .DESCRIPTION
-        Retrieves the identity type and username for a specific application pool.
+        Retrieves the identity type and username for a specific application pool
     .PARAMETER AppPoolName
-        Name of the application pool to get identity information for.
+        Name of the application pool to get identity information for
+    .PARAMETER SystemInfo
+        Optional system information object containing IIS data
     .RETURNS
-        String containing the identity information.
+        String containing the identity information
     #>
     [CmdletBinding()]
-    param (
+    param(
         [Parameter(Mandatory = $true)]
-        [string]$AppPoolName
+        [string]$AppPoolName,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$SystemInfo = $null
     )
     
-    if (-not (Test-SystemInfoAvailability)) {
-        return "Unknown"
-    }
-    
-    if ($global:SystemInfo.IIS.ApplicationPools) {
-        $appPool = $global:SystemInfo.IIS.ApplicationPools | Where-Object { $_.Name -eq $AppPoolName }
+    if ($SystemInfo -and $SystemInfo.IIS -and $SystemInfo.IIS.ApplicationPools) {
+        $appPool = $SystemInfo.IIS.ApplicationPools | Where-Object { $_.Name -eq $AppPoolName }
         if ($appPool) {
             $identityType = $appPool.ProcessModel.IdentityType
             $userName = $appPool.ProcessModel.UserName
@@ -73,26 +75,6 @@ function Get-AppPoolIdentity {
         }
     }
     return "Unknown"
-}
-
-function Test-SystemInfoAvailability {
-    <#
-    .SYNOPSIS
-        Test if system information is available.
-    .DESCRIPTION
-        Checks if the global SystemInfo variable is populated.
-    .RETURNS
-        Boolean indicating availability of system information.
-    #>
-    [CmdletBinding()]
-    param ()
-
-    if ($null -eq $global:SystemInfo) {
-        Write-Warning "System information is not available. Please run Get-SystemInformation first."
-        return $false
-    }
-
-    return $true
 }
 
 function Get-InstanceAlias {
@@ -139,7 +121,7 @@ function Get-InstanceAlias {
     catch {
         return "Unknown"
     }
-} 
+}
 
 function Show-SystemInfoSummary {
     <#
@@ -147,41 +129,49 @@ function Show-SystemInfoSummary {
         Displays a concise summary of gathered system information
     .DESCRIPTION
         Shows system information with optional deployment details and disk space
+    .PARAMETER SystemInfo
+        System information object to display
+    .PARAMETER DetectionResults
+        Optional detection results for deployment information
     .PARAMETER ShowDeploymentInfo
         Whether to show ESS/WFE deployment information
     .PARAMETER ShowDiskSpace
         Whether to show disk space information
     #>
     [CmdletBinding()]
-    param (
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$SystemInfo,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$DetectionResults = $null,
+        
         [bool]$ShowDeploymentInfo = $false,
         [bool]$ShowDiskSpace = $false
     )
 
     Write-Host "=== System Information Summary ===" -ForegroundColor Magenta
 
-    $sysInfo = $global:SystemInfo
-    
     # Basic System Info
-    Write-Host "Computer Name: $($sysInfo.ComputerName)" -ForegroundColor White
-    Write-Host "Operating System: $($sysInfo.OS.Caption) $(if ($sysInfo.OS.IsServer) { '(Server)' } else { '(Client)' })" -ForegroundColor White
-    Write-Host "Total Memory: $($sysInfo.Hardware.TotalPhysicalMemory) GB" -ForegroundColor White
-    Write-Host "CPU Cores: $($sysInfo.Hardware.TotalCores)" -ForegroundColor White
-    Write-Host "IIS Installed: $(if ($sysInfo.IIS.IsInstalled) { 'Yes (v' + $sysInfo.IIS.Version + ')' } else { 'No' })" -ForegroundColor White
+    Write-Host "Computer Name: $($SystemInfo.ComputerName)" -ForegroundColor White
+    Write-Host "Operating System: $($SystemInfo.OS.Caption) $(if ($SystemInfo.OS.IsServer) { '(Server)' } else { '(Client)' })" -ForegroundColor White
+    Write-Host "Total Memory: $($SystemInfo.Hardware.TotalPhysicalMemory) GB" -ForegroundColor White
+    Write-Host "CPU Cores: $($SystemInfo.Hardware.TotalCores)" -ForegroundColor White
+    Write-Host "IIS Installed: $(if ($SystemInfo.IIS.IsInstalled) { 'Yes (v' + $SystemInfo.IIS.Version + ')' } else { 'No' })" -ForegroundColor White
     
     # Optional: Show disk space for C: drive
     if ($ShowDiskSpace) {
-        $cDrive = $sysInfo.Hardware.LogicalDisks | Where-Object { $_.DeviceID -eq 'C:' } | Select-Object -First 1
+        $cDrive = $SystemInfo.Hardware.LogicalDisks | Where-Object { $_.DeviceID -like "C*" } | Select-Object -First 1
         if ($cDrive) {
             Write-Host "Available Disk Space (C:): $($cDrive.FreeSpace) GB" -ForegroundColor White
         }
     }
     
     # Optional: Show deployment information
-    if ($ShowDeploymentInfo -and $global:DetectionResults) {
-        Write-Host "ESS Installed: $(if ($global:DetectionResults.ESSInstances.Count -gt 0) { 'Yes' } else { 'No' })" -ForegroundColor White
-        Write-Host "WFE Installed: $(if ($global:DetectionResults.WFEInstances.Count -gt 0) { 'Yes' } else { 'No' })" -ForegroundColor White
-        Write-Host "Deployment Type: $($global:DetectionResults.DeploymentType)" -ForegroundColor White
+    if ($ShowDeploymentInfo -and $DetectionResults) {
+        Write-Host "ESS Installed: $(if ($DetectionResults.ESSInstances.Count -gt 0) { 'Yes' } else { 'No' })" -ForegroundColor White
+        Write-Host "WFE Installed: $(if ($DetectionResults.WFEInstances.Count -gt 0) { 'Yes' } else { 'No' })" -ForegroundColor White
+        Write-Host "Deployment Type: $($DetectionResults.DeploymentType)" -ForegroundColor White
     } elseif ($ShowDeploymentInfo) {
         Write-Host "ESS Installed: Unknown" -ForegroundColor White
         Write-Host "WFE Installed: Unknown" -ForegroundColor White
@@ -190,4 +180,77 @@ function Show-SystemInfoSummary {
     
     Write-Host "=================================" -ForegroundColor Magenta
     Write-Host ""
+}
+
+function Get-WebServerURL {
+    <#
+    .SYNOPSIS
+        Gets the web server URL for an ESS instance
+    .DESCRIPTION
+        Constructs the web server URL based on the ESS instance configuration
+    .PARAMETER ESSInstance
+        ESS instance object containing site and application information
+    .PARAMETER SystemInfo
+        Optional system information for enhanced URL construction
+    .RETURNS
+        Web server URL string
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$ESSInstance,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$SystemInfo = $null
+    )
+    
+    try {
+        # Basic URL construction
+        $protocol = "http"
+        $hostname = $env:COMPUTERNAME
+        $port = "80"
+        $path = $ESSInstance.ApplicationPath
+        
+        # Use system info for enhanced URL if available
+        if ($SystemInfo -and $SystemInfo.Network) {
+            $hostname = $SystemInfo.Network.Hostname
+        }
+        
+        # Construct URL
+        $url = "$protocol" + "://" + "$hostname"
+        if ($port -ne "80") {
+            $url += ":" + "$port"
+        }
+        $url += $path
+        
+        return $url
+    }
+    catch {
+        return "Unknown"
+    }
+}
+
+function Test-SystemInfoAvailability {
+    <#
+    .SYNOPSIS
+        Test if system information is available
+    .DESCRIPTION
+        Checks if the provided system information object is valid
+    .PARAMETER SystemInfo
+        System information object to validate
+    .RETURNS
+        Boolean indicating availability of system information
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false)]
+        [hashtable]$SystemInfo = $null
+    )
+
+    if ($null -eq $SystemInfo -or $SystemInfo.Count -eq 0) {
+        Write-Warning "System information is not available."
+        return $false
+    }
+
+    return $true
 } 

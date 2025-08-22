@@ -3,10 +3,11 @@
     ESS-specific validation module
 .DESCRIPTION
     Validates ESS-specific components including detection, web.config encryption, and configuration
+    Following call stack principles with dependency injection
 .NOTES
     Author: Zoe Lai
-    Date: 04/08/2025
-    Version: 1.0
+    Date: 30/07/2025
+    Version: 2.0
 #>
 
 function Test-ESSWFEDetection {
@@ -15,44 +16,42 @@ function Test-ESSWFEDetection {
         Performs ESS/WFE detection validation
     .DESCRIPTION
         Uses the ESS/WFE detection logic to validate ESS and WFE installations
+        with injected detection results
+    .PARAMETER DetectionResults
+        Detection results containing ESS and WFE instances
     .RETURNS
         Array of validation results
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$DetectionResults
+    )
 
     try {
         Write-Host "Starting ESS/WFE detection validation..." -ForegroundColor Yellow
         
-        # Use global detection results (already populated during initialization)
-        $detectionResults = $null
-        if ($global:DetectionResults) {
-            $detectionResults = $global:DetectionResults
-        } elseif ($global:ESSConfig -and $global:ESSConfig.DetectionResults) {
-            $detectionResults = $global:ESSConfig.DetectionResults
-        }
-        
-        if (-not $detectionResults) {
+        if (-not $DetectionResults) {
             Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "Detection Results" -Status "FAIL" -Message "No detection results available"
             return
         }
         
         # Add ESS installation checks
-        if ($detectionResults.ESSInstances.Count -gt 0) {
-            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "ESS Installation" -Status "PASS" -Message "Found $($detectionResults.ESSInstances.Count) ESS installation(s)"
+        if ($DetectionResults.ESSInstances.Count -gt 0) {
+            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "ESS Installation" -Status "PASS" -Message "Found $($DetectionResults.ESSInstances.Count) ESS installation(s)"
         } else {
             Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "ESS Installation" -Status "INFO" -Message "No ESS installations found on this machine"
         }
         
         # Add WFE installation checks
-        if ($detectionResults.WFEInstances.Count -gt 0) {
-            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "WFE Installation" -Status "PASS" -Message "Found $($detectionResults.WFEInstances.Count) WFE installation(s)"
+        if ($DetectionResults.WFEInstances.Count -gt 0) {
+            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "WFE Installation" -Status "PASS" -Message "Found $($DetectionResults.WFEInstances.Count) WFE installation(s)"
         } else {
             Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "WFE Installation" -Status "INFO" -Message "No WFE installations found on this machine"
         }
         
         # Add deployment type check
-        Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "Deployment Type" -Status "INFO" -Message "Deployment Type: $($detectionResults.DeploymentType)"
+        Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "Deployment Type" -Status "INFO" -Message "Deployment Type: $($DetectionResults.DeploymentType)"
         
         Write-Host "ESS/WFE detection validation completed." -ForegroundColor Green
     }
@@ -69,26 +68,24 @@ function Test-WebConfigEncryptionValidation {
     .DESCRIPTION
         Checks if web.config is properly encrypted when SingleSignOn authentication is used.
         Provides warnings for upgrade scenarios where decryption is needed.
+        Uses injected detection results.
+    .PARAMETER DetectionResults
+        Detection results containing ESS instances
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$DetectionResults
+    )
 
     Write-Verbose "Testing web.config encryption validation..."
     
-    # Get detection results
-    $detectionResults = $null
-    if ($global:ESSConfig -and $global:ESSConfig.DetectionResults) {
-        $detectionResults = $global:ESSConfig.DetectionResults
-    } elseif ($global:DetectionResults) {
-        $detectionResults = $global:DetectionResults
-    }
-    
-    if (-not $detectionResults -or -not $detectionResults.ESSInstances) {
+    if (-not $DetectionResults -or -not $DetectionResults.ESSInstances) {
         Add-HealthCheckResult -Category "Web.Config Encryption" -Check "ESS Detection" -Status "WARNING" -Message "No ESS instances detected for encryption validation"
         return
     }
     
-    foreach ($ess in $detectionResults.ESSInstances) {
+    foreach ($ess in $DetectionResults.ESSInstances) {
         $siteName = $ess.SiteName
         $applicationPath = $ess.ApplicationPath
         $authMode = $ess.AuthenticationMode
@@ -120,26 +117,29 @@ function Test-ESSVersionValidation {
         Validates ESS and PayGlobal versions for compatibility
     .DESCRIPTION
         Checks ESS version against minimum requirements and PayGlobal version compatibility
+        using injected detection results and configuration
+    .PARAMETER DetectionResults
+        Detection results containing ESS instances
+    .PARAMETER Configuration
+        Optional configuration object containing version requirements
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$DetectionResults,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$Configuration = $null
+    )
 
     Write-Verbose "Testing ESS version validation..."
     
-    # Get detection results
-    $detectionResults = $null
-    if ($global:ESSConfig -and $global:ESSConfig.DetectionResults) {
-        $detectionResults = $global:ESSConfig.DetectionResults
-    } elseif ($global:DetectionResults) {
-        $detectionResults = $global:DetectionResults
-    }
-    
-    if (-not $detectionResults -or -not $detectionResults.ESSInstances) {
+    if (-not $DetectionResults -or -not $DetectionResults.ESSInstances) {
         Add-HealthCheckResult -Category "ESS Version Validation" -Check "ESS Detection" -Status "WARNING" -Message "No ESS instances detected for version validation"
         return
     }
     
-    foreach ($ess in $detectionResults.ESSInstances) {
+    foreach ($ess in $DetectionResults.ESSInstances) {
         $siteName = $ess.SiteName
         $applicationPath = $ess.ApplicationPath
         $essVersion = $ess.ESSVersion
@@ -187,26 +187,24 @@ function Test-ESSHTTPSValidation {
         Validates HTTPS usage and SSL certificate expiry for ESS sites
     .DESCRIPTION
         Checks if ESS sites use HTTPS and validates SSL certificate expiry dates
+        using injected detection results
+    .PARAMETER DetectionResults
+        Detection results containing ESS instances
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$DetectionResults
+    )
 
     Write-Verbose "Testing ESS HTTPS validation..."
     
-    # Get detection results
-    $detectionResults = $null
-    if ($global:ESSConfig -and $global:ESSConfig.DetectionResults) {
-        $detectionResults = $global:ESSConfig.DetectionResults
-    } elseif ($global:DetectionResults) {
-        $detectionResults = $global:DetectionResults
-    }
-    
-    if (-not $detectionResults -or -not $detectionResults.ESSInstances) {
+    if (-not $DetectionResults -or -not $DetectionResults.ESSInstances) {
         Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "ESS Detection" -Status "WARNING" -Message "No ESS instances detected for HTTPS validation"
         return
     }
     
-    foreach ($ess in $detectionResults.ESSInstances) {
+    foreach ($ess in $DetectionResults.ESSInstances) {
         $siteName = $ess.SiteName
         $applicationPath = $ess.ApplicationPath
         $bindingsInfo = $ess.BindingsInfo

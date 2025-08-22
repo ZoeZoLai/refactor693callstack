@@ -699,8 +699,9 @@ function Get-ESSHealthCheckForAllInstances {
     .DESCRIPTION
         Automatically discovers ESS instances and performs health checks for each one.
         Returns comprehensive health information for all components.
-    .PARAMETER UseGlobalDetection
-        Whether to use global detection results (default: true)
+        Following call stack principles with dependency injection.
+    .PARAMETER DetectionResults
+        Detection results containing ESS instances (optional, will discover if not provided)
     .PARAMETER TimeoutSeconds
         Timeout in seconds for API requests (default: 90 seconds - increased for better reliability)
     .PARAMETER MaxRetries
@@ -708,16 +709,16 @@ function Get-ESSHealthCheckForAllInstances {
     .PARAMETER RetryDelaySeconds
         Delay between retry attempts in seconds (default: 5)
     .EXAMPLE
-        Get-ESSHealthCheckForAllInstances
+        Get-ESSHealthCheckForAllInstances -DetectionResults $detectionResults
     .EXAMPLE
-        Get-ESSHealthCheckForAllInstances -TimeoutSeconds 120 -MaxRetries 3
+        Get-ESSHealthCheckForAllInstances -DetectionResults $detectionResults -TimeoutSeconds 120 -MaxRetries 3
     .RETURNS
         Array of health check results for all ESS instances
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
-        [bool]$UseGlobalDetection = $true,
+        [hashtable]$DetectionResults = $null,
         
         [Parameter(Mandatory = $false)]
         [int]$TimeoutSeconds = 90,  # Increased default timeout from 30 to 90 seconds
@@ -734,11 +735,11 @@ function Get-ESSHealthCheckForAllInstances {
         
         $allHealthChecks = @()
         
-        # Get ESS instances from global detection or discover them
+        # Get ESS instances from provided detection results or discover them
         $essInstances = @()
-        if ($UseGlobalDetection -and $global:DetectionResults -and $global:DetectionResults.ESSInstances) {
-            $essInstances = $global:DetectionResults.ESSInstances
-            Write-Host "Using $($essInstances.Count) ESS instances from global detection results" -ForegroundColor Cyan
+        if ($DetectionResults -and $DetectionResults.ESSInstances) {
+            $essInstances = $DetectionResults.ESSInstances
+            Write-Host "Using $($essInstances.Count) ESS instances from provided detection results" -ForegroundColor Cyan
         }
         else {
             # Import the discovery function from ESSDetection module
