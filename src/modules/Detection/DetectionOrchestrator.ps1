@@ -21,7 +21,7 @@ class DetectionManager {
     
     [hashtable]DetectESSWFEDeployment([hashtable]$SystemInfo = $null) {
         Write-Host "Running ESS/WFE detection..." -ForegroundColor Yellow
-        Write-Host "SystemInfo parameter: $($SystemInfo -ne $null)" -ForegroundColor Yellow
+        Write-Host "SystemInfo parameter: $($null -ne $SystemInfo)" -ForegroundColor Yellow
         if ($SystemInfo) {
             Write-Host "SystemInfo contains $($SystemInfo.Count) items" -ForegroundColor Yellow
         }
