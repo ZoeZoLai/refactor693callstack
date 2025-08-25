@@ -10,131 +10,6 @@
     Version: 2.0
 #>
 
-class HealthCheckOrchestrator {
-    [object]$Configuration
-    [object]$HealthCheckManager
-    [hashtable]$SystemInfo
-    [hashtable]$DetectionResults
-    
-    HealthCheckOrchestrator() {
-        $this.Configuration = $null
-        $this.HealthCheckManager = $null
-        $this.SystemInfo = @{}
-        $this.DetectionResults = @{}
-    }
-    
-    [void]Initialize() {
-        Write-Verbose "Initializing Health Check Orchestrator..."
-        
-        # Clear any existing health check results
-        Clear-HealthCheckResults
-        
-        # Initialize configuration
-        $this.Configuration = Get-ESSConfiguration
-        
-        Write-Verbose "Health Check Orchestrator initialized successfully"
-    }
-    
-    [void]CollectSystemInformation() {
-        Write-Host "Step 1: Collecting system information..." -ForegroundColor Cyan
-        
-        try {
-            # Use the SystemInformationManager class
-            $systemManager = [SystemInformationManager]::new()
-            $this.SystemInfo = $systemManager.CollectSystemInformation()
-            
-            Write-Host "System information collected successfully" -ForegroundColor Green
-            Write-Host "SystemInfo contains $($this.SystemInfo.Count) items" -ForegroundColor Yellow
-            Write-Host "SystemInfo keys: $($this.SystemInfo.Keys -join ', ')" -ForegroundColor Yellow
-        }
-        catch {
-            Write-Error "Failed to collect system information: $_"
-            throw
-        }
-    }
-    
-    [void]DetectESSWFEDeployment() {
-        Write-Host "Step 2: Detecting ESS/WFE deployment..." -ForegroundColor Cyan
-        
-        try {
-            # Use the DetectionManager class
-            $detectionManager = [DetectionManager]::new()
-            $this.DetectionResults = $detectionManager.DetectESSWFEDeployment($this.SystemInfo)
-            
-            Write-Host "ESS/WFE deployment detection completed" -ForegroundColor Green
-        }
-        catch {
-            Write-Error "Failed to detect ESS/WFE deployment: $_"
-            throw
-        }
-    }
-    
-    [void]RunValidationChecks() {
-        Write-Host "Step 3: Running validation checks..." -ForegroundColor Cyan
-        
-        try {
-            # Use the ValidationManager class
-            $validationManager = [ValidationManager]::new()
-            
-            # Pass null for Configuration since it's optional and we have type mismatch issues
-            $validationManager.RunSystemValidation($this.SystemInfo, $this.DetectionResults, $null)
-            
-            Write-Host "Validation checks completed" -ForegroundColor Green
-        }
-        catch {
-            Write-Error "Failed to run validation checks: $_"
-            throw
-        }
-    }
-    
-    [string]GenerateReport() {
-        Write-Host "Step 4: Generating health check report..." -ForegroundColor Cyan
-        
-        try {
-            # Get health check results using the core functions
-            $results = Get-HealthCheckResults
-            
-            # Generate report with injected dependencies
-            # Pass null for Configuration since it's optional and we have type mismatch issues
-            $reportPath = New-HealthCheckReport -Results $results
-            
-            Write-Host "Report generated successfully" -ForegroundColor Green
-            return $reportPath
-        }
-        catch {
-            Write-Error "Failed to generate report: $_"
-            throw
-        }
-    }
-    
-    [void]DisplaySummary() {
-        Write-Host "`n=== Health Check Summary ===" -ForegroundColor Magenta
-        
-        # Display system information summary
-        Write-Host "System Information:" -ForegroundColor White
-        Write-Host "  Computer Name: $($this.SystemInfo.ComputerName)" -ForegroundColor White
-        Write-Host "  OS Version: $($this.SystemInfo.OSVersion)" -ForegroundColor White
-        Write-Host "  IIS Installed: $($this.SystemInfo.IIS.IsInstalled)" -ForegroundColor White
-        
-        # Display detection results
-        Write-Host "Detection Results:" -ForegroundColor White
-        Write-Host "  ESS Instances: $($this.DetectionResults.ESSInstances.Count)" -ForegroundColor White
-        Write-Host "  WFE Instances: $($this.DetectionResults.WFEInstances.Count)" -ForegroundColor White
-        Write-Host "  Deployment Type: $($this.DetectionResults.DeploymentType)" -ForegroundColor White
-        
-        # Display health check summary using core functions
-        $summary = Get-HealthCheckSummary
-        Write-Host "Health Check Results:" -ForegroundColor White
-        Write-Host "  Total Checks: $($summary.Total)" -ForegroundColor White
-        Write-Host "  Passed: $($summary.Pass)" -ForegroundColor Green
-        Write-Host "  Failed: $($summary.Fail)" -ForegroundColor Red
-        Write-Host "  Warnings: $($summary.Warning)" -ForegroundColor Yellow
-        Write-Host "  Info: $($summary.Info)" -ForegroundColor Cyan
-        
-        Write-Host "=============================" -ForegroundColor Magenta
-    }
-}
-
 function Start-ESSHealthChecks {
     <#
     .SYNOPSIS
@@ -150,22 +25,19 @@ function Start-ESSHealthChecks {
     try {
         Write-Host "Starting ESS Pre-Upgrade Health Checks..." -ForegroundColor Cyan
         
-        # Create orchestrator instance
-        $orchestrator = [HealthCheckOrchestrator]::new()
-        
-        # Initialize orchestrator
-        $orchestrator.Initialize()
+        # Initialize health check process
+        Initialize-HealthCheckProcess
         
         # Execute health check workflow
-        $orchestrator.CollectSystemInformation()
-        $orchestrator.DetectESSWFEDeployment()
-        $orchestrator.RunValidationChecks()
+        $systemInfo = Get-SystemInformation
+        $detectionResults = Get-ESSWFEDeployment -SystemInfo $systemInfo
+        Start-ValidationChecks -SystemInfo $systemInfo -DetectionResults $detectionResults
         
         # Generate report
-        $reportPath = $orchestrator.GenerateReport()
+        $reportPath = New-HealthCheckReport -SystemInfo $systemInfo -DetectionResults $detectionResults
         
         # Display summary
-        $orchestrator.DisplaySummary()
+        Show-HealthCheckSummary -SystemInfo $systemInfo -DetectionResults $detectionResults
         
         Write-Host "`nHealth Checks completed successfully!" -ForegroundColor Green
         Write-Host "Report generated at: $reportPath" -ForegroundColor Cyan
@@ -176,6 +48,191 @@ function Start-ESSHealthChecks {
         Write-Error "An error occurred during the ESS Health Check: $_"
         throw
     }
+}
+
+function Initialize-HealthCheckProcess {
+    <#
+    .SYNOPSIS
+        Initializes the health check process
+    .DESCRIPTION
+        Clears existing results and initializes configuration
+    #>
+    Write-Verbose "Initializing Health Check Process..."
+    
+    # Clear any existing health check results
+    Clear-HealthCheckResults
+    
+    # Initialize configuration
+    $null = Get-ESSConfiguration
+    
+    Write-Verbose "Health Check Process initialized successfully"
+}
+
+function Get-SystemInformation {
+    <#
+    .SYNOPSIS
+        Collects system information
+    .DESCRIPTION
+        Gathers comprehensive system information using direct function calls
+    .RETURNS
+        Hashtable containing system information
+    #>
+    Write-Host "Step 1: Collecting system information..." -ForegroundColor Cyan
+    
+    try {
+        $systemInfo = Get-SystemInformation
+        
+        Write-Host "System information collected successfully" -ForegroundColor Green
+        Write-Host "SystemInfo contains $($systemInfo.Count) items" -ForegroundColor Yellow
+        Write-Host "SystemInfo keys: $($systemInfo.Keys -join ', ')" -ForegroundColor Yellow
+        
+        return $systemInfo
+    }
+    catch {
+        Write-Error "Failed to collect system information: $_"
+        throw
+    }
+}
+
+function Get-ESSWFEDeployment {
+    <#
+    .SYNOPSIS
+        Detects ESS/WFE deployment
+    .DESCRIPTION
+        Detects ESS and WFE installations using direct function calls
+    .PARAMETER SystemInfo
+        System information hashtable
+    .RETURNS
+        Hashtable containing detection results
+    #>
+    [CmdletBinding()]
+    param(
+        [hashtable]$SystemInfo
+    )
+    
+    Write-Host "Step 2: Detecting ESS/WFE deployment..." -ForegroundColor Cyan
+    
+    try {
+        $detectionResults = Get-ESSWFEDetection -SystemInfo $SystemInfo
+        
+        Write-Host "ESS/WFE deployment detection completed" -ForegroundColor Green
+        
+        return $detectionResults
+    }
+    catch {
+        Write-Error "Failed to detect ESS/WFE deployment: $_"
+        throw
+    }
+}
+
+function Start-ValidationChecks {
+    <#
+    .SYNOPSIS
+        Runs validation checks
+    .DESCRIPTION
+        Performs comprehensive system validation using direct function calls
+    .PARAMETER SystemInfo
+        System information hashtable
+    .PARAMETER DetectionResults
+        Detection results hashtable
+    #>
+    [CmdletBinding()]
+    param(
+        [hashtable]$SystemInfo,
+        [hashtable]$DetectionResults
+    )
+    
+    Write-Host "Step 3: Running validation checks..." -ForegroundColor Cyan
+    
+    try {
+        Start-SystemValidation -SystemInfo $SystemInfo -DetectionResults $DetectionResults
+        
+        Write-Host "Validation checks completed" -ForegroundColor Green
+    }
+    catch {
+        Write-Error "Failed to run validation checks: $_"
+        throw
+    }
+}
+
+function New-HealthCheckReport {
+    <#
+    .SYNOPSIS
+        Generates health check report
+    .DESCRIPTION
+        Creates HTML report using direct function calls
+    .PARAMETER SystemInfo
+        System information hashtable
+    .PARAMETER DetectionResults
+        Detection results hashtable
+    .RETURNS
+        Path to the generated report
+    #>
+    [CmdletBinding()]
+    param(
+        [hashtable]$SystemInfo,
+        [hashtable]$DetectionResults
+    )
+    
+    Write-Host "Step 4: Generating health check report..." -ForegroundColor Cyan
+    
+    try {
+        # Get health check results using the core functions
+        $results = Get-HealthCheckResults
+        
+        # Generate report with system info and detection results
+        $reportPath = New-HealthCheckReport -Results $results -SystemInfo $SystemInfo -DetectionResults $DetectionResults
+        
+        Write-Host "Report generated successfully" -ForegroundColor Green
+        return $reportPath
+    }
+    catch {
+        Write-Error "Failed to generate report: $_"
+        throw
+    }
+}
+
+function Show-HealthCheckSummary {
+    <#
+    .SYNOPSIS
+        Displays health check summary
+    .DESCRIPTION
+        Shows comprehensive summary of health check results
+    .PARAMETER SystemInfo
+        System information hashtable
+    .PARAMETER DetectionResults
+        Detection results hashtable
+    #>
+    [CmdletBinding()]
+    param(
+        [hashtable]$SystemInfo,
+        [hashtable]$DetectionResults
+    )
+    
+    Write-Host "`n=== Health Check Summary ===" -ForegroundColor Magenta
+    
+    # Display system information summary
+    Write-Host "System Information:" -ForegroundColor White
+    Write-Host "  Computer Name: $($SystemInfo.ComputerName)" -ForegroundColor White
+    Write-Host "  OS Version: $($SystemInfo.OS.Caption)" -ForegroundColor White
+    Write-Host "  IIS Installed: $($SystemInfo.IIS.IsInstalled)" -ForegroundColor White
+    
+    # Display detection results
+    Write-Host "Detection Results:" -ForegroundColor White
+    Write-Host "  ESS Instances: $($DetectionResults.ESSInstances.Count)" -ForegroundColor White
+    Write-Host "  WFE Instances: $($DetectionResults.WFEInstances.Count)" -ForegroundColor White
+    Write-Host "  Deployment Type: $($DetectionResults.DeploymentType)" -ForegroundColor White
+    
+    # Display health check summary using core functions
+    $summary = Get-HealthCheckSummary
+    Write-Host "Health Check Results:" -ForegroundColor White
+    Write-Host "  Total Checks: $($summary.Total)" -ForegroundColor White
+    Write-Host "  Passed: $($summary.Pass)" -ForegroundColor Green
+    Write-Host "  Failed: $($summary.Fail)" -ForegroundColor Red
+    Write-Host "  Warnings: $($summary.Warning)" -ForegroundColor Yellow
+    Write-Host "  Info: $($summary.Info)" -ForegroundColor Cyan
+    
+    Write-Host "=============================" -ForegroundColor Magenta
 }
 
 function Test-HealthCheckDependencies {

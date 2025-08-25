@@ -71,7 +71,7 @@ function Initialize-ModuleLoader {
     Write-Verbose "Module loader initialized successfully"
 }
 
-function Load-Modules {
+function Import-Modules {
     <#
     .SYNOPSIS
         Loads all modules in the correct dependency order

@@ -30,7 +30,7 @@ function Initialize-ESSHealthChecker {
         Initialize-ModuleLoader
         
         # Load all modules in the correct order
-        Load-Modules
+        Import-Modules
         
         # Test dependencies (temporarily disabled for debugging)
         # Test-HealthCheckDependencies
@@ -81,18 +81,8 @@ function Start-ESSHealthChecks {
         # Import the main orchestrator after all dependent modules are loaded
         . .\Core\HealthCheckOrchestrator.ps1
         
-        # Use the orchestrator pattern instead of individual function calls
-        $orchestrator = [HealthCheckOrchestrator]::new()
-        $orchestrator.Initialize()
-        
-        # Execute the complete health check workflow
-        $orchestrator.CollectSystemInformation()
-        $orchestrator.DetectESSWFEDeployment()
-        $orchestrator.RunValidationChecks()
-        $reportPath = $orchestrator.GenerateReport()
-        
-        # Display summary
-        $orchestrator.DisplaySummary()
+        # Use the function-based orchestrator pattern
+        $reportPath = Start-ESSHealthChecks
         
         Write-Host "`nHealth Checks completed successfully!" -ForegroundColor Green
         Write-Host "Report generated at: $reportPath" -ForegroundColor Cyan

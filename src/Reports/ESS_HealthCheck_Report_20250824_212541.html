@@ -1,0 +1,656 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESS Pre-Upgrade Health Check Report</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #C497FE 0%, #7B14EF 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .section-header {
+            background-color: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: 600;
+            color: #495057;
+        }
+        .section-content {
+            padding: 20px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .info-card {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #7B14EF;
+        }
+        .info-card h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+        }
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .info-label {
+            font-weight: 500;
+            color: #6c757d;
+        }
+        .info-value {
+            color: #495057;
+        }
+        .status-pass {
+            color: #28a745;
+            font-weight: 600;
+        }
+        .status-fail {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        .status-warning {
+            color: #ffc107;
+            font-weight: 600;
+        }
+        .status-info {
+            color: #17a2b8;
+            font-weight: 600;
+        }
+        .requirements-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .requirements-table th,
+        .requirements-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .requirements-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        .requirements-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        .instances-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.85em;
+            table-layout: fixed;
+            word-wrap: break-word;
+        }
+        .instances-table th,
+        .instances-table td {
+            border: 1px solid #ddd;
+            padding: 6px 8px;
+            text-align: left;
+            vertical-align: top;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .instances-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+            white-space: nowrap;
+        }
+        .instances-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        .table-container {
+            overflow-x: auto;
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        /* Responsive table for smaller screens */
+        @media (max-width: 1200px) {
+            .instances-table {
+                font-size: 0.8em;
+            }
+            .instances-table th,
+            .instances-table td {
+                padding: 4px 6px;
+            }
+        }
+        @media (max-width: 900px) {
+            .instances-table {
+                font-size: 0.75em;
+            }
+            .instances-table th,
+            .instances-table td {
+                padding: 3px 4px;
+            }
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            border-top: 1px solid #e0e0e0;
+        }
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #c497fe 0%, #7b14ef 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            opacity: 0.9;
+        }
+        .health-results {
+            margin-top: 20px;
+        }
+        .health-result {
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            border-left: 4px solid;
+        }
+        .health-result.pass {
+            background-color: #d4edda;
+            border-left-color: #28a745;
+        }
+        .health-result.fail {
+            background-color: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        .health-result.warning {
+            background-color: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        .health-result.info {
+            background-color: #d1ecf1;
+            border-left-color: #17a2b8;
+        }
+        
+        /* Enhanced API Health Check Styles */
+        .health-result.http-status {
+            background-color: #e3f2fd;
+            border-left-color: #2196f3;
+            font-weight: 500;
+        }
+        .health-result.component-messages {
+            background-color: #fff8e1;
+            border-left-color: #ff9800;
+            font-style: italic;
+        }
+        .health-result.component-result {
+            background-color: #f3e5f5;
+            border-left-color: #9c27b0;
+        }
+        .message-content {
+            display: block;
+            margin-top: 5px;
+            line-height: 1.4;
+        }
+        .deployment-summary {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .deployment-summary h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+        }
+        .recommendations-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .recommendations-table th,
+        .recommendations-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .recommendations-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        .recommendations-table tr:hover {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ESS Pre-Upgrade Health Check Report</h1>
+            <p>Generated on August 24, 2025 at 21:25:41</p>
+        </div>
+        
+        <div class="content">
+            <!-- Executive Summary -->
+            <div class="summary-stats">
+                <div class="stat-card">
+                    <div class="stat-number">Not Installed</div>
+                    <div class="stat-label">ESS Status</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">Not Installed</div>
+                    <div class="stat-label">WFE Status</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">Installed</div>
+                    <div class="stat-label">SQL Server</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">44/50</div>
+                    <div class="stat-label">Checks Passed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">1</div>
+                    <div class="stat-label">Failed Checks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">Warnings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">5</div>
+                    <div class="stat-label">Info Items</div>
+                </div>
+            </div>
+
+            <!-- Deployment Overview -->
+            <div class="section">
+                <div class="section-header">Deployment Overview</div>
+                <div class="section-content">
+                    <div class="deployment-summary">
+                        <h4>Current Deployment Structure</h4>
+                        <div class="info-item">
+                            <span class="info-label">Server:</span>
+                            <span class="info-value">MYOBPF3X2ZR5</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Deployment Type:</span>
+                            <span class="info-value">Unknown</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Operating System:</span>
+                            <span class="info-value">Microsoft Windows 11 Enterprise (Client)</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">IIS Status:</span>
+                            <span class="info-value status-pass">Installed (10.0)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>System Information</h4>
+                            <div class="info-item">
+                                <span class="info-label">Memory:</span>
+                                <span class="info-value">32 GB</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">CPU Cores:</span>
+                                <span class="info-value">12</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Processor Speed:</span>
+                                <span class="info-value">2.1 GHz</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Disk Space (C:):</span>
+                                <span class="info-value">475.69 GB</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-card">
+                            <h4>Software Requirements</h4>
+                            <div class="info-item">
+                                <span class="info-label">.NET Framework:</span>
+                                <span class="info-value">4.8.09032</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">IIS Sites:</span>
+                                <span class="info-value">1 sites</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Application Pools:</span>
+                                <span class="info-value">12 pools</span>
+                            </div>
+                                                        <div class="info-item">
+                                <span class="info-label">SQL Server:</span>
+                                <span class="info-value">1 instance - SQL Server 2019, SQL Server 2022</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ESS/WFE Instances -->
+            <div class="section">
+                <div class="section-header">ESS and WFE Instances</div>
+                <div class="section-content">
+                                        <h4>ESS Instances Found: 3</h4>
+                    <div class="table-container">
+                    <table class="instances-table">
+                        <thead>
+                            <tr>
+                                <th>Site Name</th>
+                                <th>App Pool</th>
+                                <th>Pool Identity</th>
+                                <th>Install Path</th>
+                                <th>Web Server URL</th>
+                                <th>Database Server</th>
+                                <th>DB Name</th>
+                                <th>Tenant ID</th>
+                                <th>Auth Mode</th>
+                            </tr>
+                        </thead>
+                        <tbody>                            <tr>
+                                <td>Default Web Site - Self-Service/ESS</td>
+                                <td>ESS</td>
+                                <td>Unknown</td>
+                                <td>C:\inetpub\wwwroot\Self-Service\ESS</td>
+                                <td>https://localhost/ESS</td>
+                                <td>MYOBPF3X2ZR5\SQLSERVER2019</td>
+                                <td>Treetops_NZ</td>
+                                <td>ba81e050-ec65-11df-98cf-0800200c9a66</td>
+                                <td>PayGlobal</td>
+                            </tr>                            <tr>
+                                <td>Default Web Site - Self-Service/NZ_ESS</td>
+                                <td>NZESS</td>
+                                <td>Unknown</td>
+                                <td>C:\inetpub\wwwroot\Self-Service\NZ_ESS</td>
+                                <td>https://localhost/Self-Service/NZ_ESS</td>
+                                <td>MYOBPF3X2ZR5\SQLSERVER2019</td>
+                                <td>Template_NZ</td>
+                                <td>ba81e050-ec65-11df-98cf-0800200c9a66</td>
+                                <td>PayGlobal</td>
+                            </tr>                            <tr>
+                                <td>Default Web Site - Self-Service/ESS_AU</td>
+                                <td>ESSAU</td>
+                                <td>Unknown</td>
+                                <td>C:\inetpub\wwwroot\Self-Service\ESS_AU</td>
+                                <td>https://localhost/ESS_AU</td>
+                                <td>MYOBPF3X2ZR5\SQLSERVER2019</td>
+                                <td>Template_AU</td>
+                                <td>ba81e050-ec65-11df-98cf-0800200c9a66</td>
+                                <td>AlternativeUsername</td>
+                            </tr>                        </tbody>
+                    </table>
+                    </div>
+                    
+                                        <h4>WFE Instances Found: 3</h4>
+                    <div class="table-container">
+                    <table class="instances-table">
+                        <thead>
+                            <tr>
+                                <th>Site Name</th>
+                                <th>App Pool</th>
+                                <th>Pool Identity</th>
+                                <th>Install Path</th>
+                                <th>Database Server</th>
+                                <th>DB Name</th>
+                                <th>Tenant ID</th>
+                                <th>Client URL</th>
+                            </tr>
+                        </thead>
+                        <tbody>                            <tr>
+                                <td>Default Web Site - Self-Service/WorkflowEngine</td>
+                                <td>WFE</td>
+                                <td>Unknown</td>
+                                <td>C:\inetpub\wwwroot\Self-Service\WorkflowEngine</td>
+                                <td>MYOBPF3X2ZR5\SQLSERVER2019</td>
+                                <td>Treetops_NZ</td>
+                                <td>ba81e050-ec65-11df-98cf-0800200c9a66</td>
+                                <td>http://localhost/Self-Service/ESS/SignIn.aspx</td>
+                            </tr>                            <tr>
+                                <td>Default Web Site - Self-Service/NZ_WFE</td>
+                                <td>NZWFE</td>
+                                <td>Unknown</td>
+                                <td>C:\inetpub\wwwroot\Self-Service\NZ_WFE</td>
+                                <td>MYOBPF3X2ZR5\SQLSERVER2019</td>
+                                <td>Template_NZ</td>
+                                <td>ba81e050-ec65-11df-98cf-0800200c9a66</td>
+                                <td>http://localhost/Self-Service/NZ_ESS/SignIn.aspx</td>
+                            </tr>                            <tr>
+                                <td>Default Web Site - Self-Service/WFE_AU</td>
+                                <td>WFEAU</td>
+                                <td>Unknown</td>
+                                <td>C:\inetpub\wwwroot\Self-Service\WFE_AU</td>
+                                <td>MYOBPF3X2ZR5\SQLSERVER2019</td>
+                                <td>Template_AU</td>
+                                <td>ba81e050-ec65-11df-98cf-0800200c9a66</td>
+                                <td>http://localhost/Self-Service/ESS_AU/SignIn.aspx</td>
+                            </tr>                        </tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- Health Check Results -->
+            <div class="section">
+                <div class="section-header">Health Check Results</div>
+                <div class="section-content">
+                    <div class="health-results">
+                                                <div class="health-result pass ">
+                            <strong>[PASS] System Requirements - Free Disk Space</strong><br>
+                            Sufficient disk space available. Available: 38.42 (Total: 475.69) GB - meets requirement of 10 GB
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] System Requirements - Memory</strong><br>
+                            Sufficient memory available. Available: 32 GB - meets requirement of 32 GB
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] System Requirements - CPU Cores</strong><br>
+                            Sufficient CPU cores available. Available: 12 - meets requirement of 4
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] System Requirements - Processor Speed</strong><br>
+                            Sufficient processor speed available. Available: 2.1 GHz - meets requirement of 2 GHz
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] System Requirements - IIS Installation</strong><br>
+                            IIS is installed (Version: 10.0) - meets minimum requirement of 7.5
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] System Requirements - .NET Framework</strong><br>
+                            .NET Framework 4.8.09032 installed - meets minimum requirement of 4.8
+                        </div>                         <div class="health-result info ">
+                            <strong>[INFO] System Requirements - Operating System</strong><br>
+                            Client OS detected: Microsoft Windows 11 Enterprise. ESS is designed for server deployment, but health check can still run on client systems.
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] IIS Configuration - IIS Sites</strong><br>
+                            Found 1 IIS sites
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] IIS Configuration - IIS Application Pools</strong><br>
+                            Found 12 IIS application pools
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] Network Connectivity - Internet Connectivity</strong><br>
+                            Internet connectivity confirmed
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] Network Connectivity - Network Adapters</strong><br>
+                            Found 3 active network adapters
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] Security Permissions - Administrator Rights</strong><br>
+                            Script is running with administrator privileges
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] Security Permissions - File System Access</strong><br>
+                            File system access confirmed
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] ESS/WFE Detection - ESS Installation</strong><br>
+                            Found 3 ESS installation(s)
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] ESS/WFE Detection - WFE Installation</strong><br>
+                            Found 3 WFE installation(s)
+                        </div>                         <div class="health-result info ">
+                            <strong>[INFO] ESS/WFE Detection - Deployment Type</strong><br>
+                            Deployment Type: Combined
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] Database Connectivity - ESS - PG Database Connection</strong><br>
+                            Successfully connected to PG database: MYOBPF3X2ZR5\SQLSERVER2019 - Treetops_NZ
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] Database Connectivity - ESS - PG Database Connection</strong><br>
+                            Successfully connected to PG database: MYOBPF3X2ZR5\SQLSERVER2019 - Template_NZ
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] Database Connectivity - ESS - PG Database Connection</strong><br>
+                            Successfully connected to PG database: MYOBPF3X2ZR5\SQLSERVER2019 - Template_AU
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] Database Connectivity - WFE - PG Database Connection</strong><br>
+                            Successfully connected to PG database: MYOBPF3X2ZR5\SQLSERVER2019 - Treetops_NZ
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] Database Connectivity - WFE - PG Database Connection</strong><br>
+                            Successfully connected to PG database: MYOBPF3X2ZR5\SQLSERVER2019 - Template_NZ
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] Database Connectivity - WFE - PG Database Connection</strong><br>
+                            Successfully connected to PG database: MYOBPF3X2ZR5\SQLSERVER2019 - Template_AU
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] Web.Config Encryption - Authentication Encryption</strong><br>
+                            ESS site 'Default Web Site - Self-Service/ESS' uses PayGlobal authentication and web.config is not encrypted
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] Web.Config Encryption - Authentication Encryption</strong><br>
+                            ESS site 'Default Web Site - Self-Service/NZ_ESS' uses PayGlobal authentication and web.config is not encrypted
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] Web.Config Encryption - Authentication Encryption</strong><br>
+                            ESS site 'Default Web Site - Self-Service/ESS_AU' uses AlternativeUsername authentication and web.config is not encrypted
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] ESS Version Validation - ESS Version</strong><br>
+                            ESS site 'Default Web Site - Self-Service/ESS' version 5.4.9.1 is supported
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] ESS Version Validation - PayGlobal Version</strong><br>
+                            ESS site 'Default Web Site - Self-Service/ESS' PayGlobal version 4.69.0.1 is compatible with ESS version 5.4.9.1
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] ESS Version Validation - Overall Compatibility</strong><br>
+                            ESS site 'Default Web Site - Self-Service/ESS' versions are compatible for upgrade
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] ESS Version Validation - ESS Version</strong><br>
+                            ESS site 'Default Web Site - Self-Service/NZ_ESS' version 5.5.1.1 is supported
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] ESS Version Validation - PayGlobal Version</strong><br>
+                            ESS site 'Default Web Site - Self-Service/NZ_ESS' PayGlobal version 4.70.0.1 is compatible with ESS version 5.5.1.1
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] ESS Version Validation - Overall Compatibility</strong><br>
+                            ESS site 'Default Web Site - Self-Service/NZ_ESS' versions are compatible for upgrade
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] ESS Version Validation - ESS Version</strong><br>
+                            ESS site 'Default Web Site - Self-Service/ESS_AU' version 5.5.1.1 is supported
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] ESS Version Validation - PayGlobal Version</strong><br>
+                            ESS site 'Default Web Site - Self-Service/ESS_AU' PayGlobal version 4.70.0.0 is compatible with ESS version 5.5.1.1
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] ESS Version Validation - Overall Compatibility</strong><br>
+                            ESS site 'Default Web Site - Self-Service/ESS_AU' versions are compatible for upgrade
+                        </div>                         <div class="health-result info ">
+                            <strong>[INFO] ESS HTTPS Validation - HTTPS Usage</strong><br>
+                            ESS site 'Default Web Site - Self-Service/ESS' uses HTTP protocol (not HTTPS)
+                        </div>                         <div class="health-result info ">
+                            <strong>[INFO] ESS HTTPS Validation - HTTPS Usage</strong><br>
+                            ESS site 'Default Web Site - Self-Service/NZ_ESS' uses HTTP protocol (not HTTPS)
+                        </div>                         <div class="health-result info ">
+                            <strong>[INFO] ESS HTTPS Validation - HTTPS Usage</strong><br>
+                            ESS site 'Default Web Site - Self-Service/ESS_AU' uses HTTP protocol (not HTTPS)
+                        </div>                         <div class="health-result fail ">
+                            <strong>[FAIL] ESS API Health Check - Overall Status - Default Web Site/Self-Service/ESS</strong><br>
+                            <span class='message-content'>ESS instance Default Web Site/Self-Service/ESS health check failed: HTTP request failed after 1 attempts: The remote server returned an error: (404) Not Found.</span>
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] ESS API Health Check - Overall Status - Default Web Site/Self-Service/NZ_ESS</strong><br>
+                            <span class='message-content'>ESS instance Default Web Site/Self-Service/NZ_ESS is healthy. Components: 7 total, 7 healthy</span>
+                        </div>                         <div class="health-result pass component-result">
+                            <strong>[PASS] ESS API Components - PayGlobal Database - Default Web Site/Self-Service/NZ_ESS</strong><br>
+                            <span class='message-content'>PayGlobal Database is Healthy (v4.70.0000)</span>
+                        </div>                         <div class="health-result pass component-result">
+                            <strong>[PASS] ESS API Components - SelfService Software - Default Web Site/Self-Service/NZ_ESS</strong><br>
+                            <span class='message-content'>SelfService Software is Healthy (v5.5.1.1)</span>
+                        </div>                         <div class="health-result pass component-result">
+                            <strong>[PASS] ESS API Components - Bridge - Default Web Site/Self-Service/NZ_ESS</strong><br>
+                            <span class='message-content'>Bridge is Healthy (v4.70.0000)</span>
+                        </div>                         <div class="health-result pass component-result">
+                            <strong>[PASS] ESS API Components - Bridge Communication - Default Web Site/Self-Service/NZ_ESS</strong><br>
+                            <span class='message-content'>Bridge Communication is Healthy (v4.70.0000)</span>
+                        </div>                         <div class="health-result pass component-result">
+                            <strong>[PASS] ESS API Components - Workflow Endpoints - Default Web Site/Self-Service/NZ_ESS</strong><br>
+                            <span class='message-content'>Workflow Endpoints is Healthy (v4.70.0000)</span>
+                        </div>                         <div class="health-result pass ">
+                            <strong>[PASS] ESS API Health Check - Overall Status - Default Web Site/Self-Service/ESS_AU</strong><br>
+                            <span class='message-content'>ESS instance Default Web Site/Self-Service/ESS_AU is healthy. Components: 7 total, 7 healthy</span>
+                        </div>                         <div class="health-result pass component-result">
+                            <strong>[PASS] ESS API Components - PayGlobal Database - Default Web Site/Self-Service/ESS_AU</strong><br>
+                            <span class='message-content'>PayGlobal Database is Healthy (v4.70.0000)</span>
+                        </div>                         <div class="health-result pass component-result">
+                            <strong>[PASS] ESS API Components - SelfService Software - Default Web Site/Self-Service/ESS_AU</strong><br>
+                            <span class='message-content'>SelfService Software is Healthy (v5.5.1.1)</span>
+                        </div>                         <div class="health-result pass component-result">
+                            <strong>[PASS] ESS API Components - Bridge - Default Web Site/Self-Service/ESS_AU</strong><br>
+                            <span class='message-content'>Bridge is Healthy (v4.70.0000)</span>
+                        </div>                         <div class="health-result pass component-result">
+                            <strong>[PASS] ESS API Components - Bridge Communication - Default Web Site/Self-Service/ESS_AU</strong><br>
+                            <span class='message-content'>Bridge Communication is Healthy (v4.70.0000)</span>
+                        </div>                         <div class="health-result pass component-result">
+                            <strong>[PASS] ESS API Components - Workflow Endpoints - Default Web Site/Self-Service/ESS_AU</strong><br>
+                            <span class='message-content'>Workflow Endpoints is Healthy (v4.70.0000)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+        
+        <div class="footer">
+            <p>ESS Pre-Upgrade Health Check Report - Generated by MYOB PayGlobal ESS Health Checker</p>
+        </div>
+    </div>
+</body>
+</html>

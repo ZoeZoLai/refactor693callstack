@@ -17,6 +17,10 @@ function New-HealthCheckReport {
         Creates a comprehensive HTML report from health check results
     .PARAMETER Results
         Array of health check results
+    .PARAMETER SystemInfo
+        System information hashtable
+    .PARAMETER DetectionResults
+        Detection results hashtable
     .PARAMETER OutputPath
         Optional output path for the report
     .RETURNS
@@ -26,6 +30,12 @@ function New-HealthCheckReport {
     param(
         [Parameter(Mandatory = $true)]
         [array]$Results,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$SystemInfo = $null,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$DetectionResults = $null,
         
         [Parameter(Mandatory = $false)]
         [string]$OutputPath = $null
@@ -57,7 +67,7 @@ function New-HealthCheckReport {
         $reportPath = Join-Path $OutputPath $reportName
         
         # Generate HTML content
-        $htmlContent = New-ReportHTML -Results $Results -SystemInfo $global:SystemInfo -DetectionResults $global:DetectionResults
+        $htmlContent = New-ReportHTML -Results $Results -SystemInfo $SystemInfo -DetectionResults $DetectionResults
         
         # Write report to file
         $htmlContent | Out-File -FilePath $reportPath -Encoding UTF8
@@ -96,9 +106,9 @@ function New-ReportHTML {
         [hashtable]$DetectionResults = $null
     )
 
-    # Use provided parameters or fall back to global variables if available
-    $sysInfo = if ($SystemInfo) { $SystemInfo } else { $global:SystemInfo }
-    $detectionResults = if ($DetectionResults) { $DetectionResults } else { $global:DetectionResults }
+    # Use provided parameters 
+    $sysInfo = $SystemInfo
+    $detectionResults = $DetectionResults
     
 
     
@@ -397,15 +407,15 @@ function New-ReportHTML {
             <!-- Executive Summary -->
             <div class="summary-stats">
                 <div class="stat-card">
-                    <div class="stat-number">$(if ($global:DetectionResults -and $global:DetectionResults.ESSInstances.Count -gt 0) { "Installed" } else { "Not Installed" })</div>
+                    <div class="stat-number">$(if ($detectionResults -and $detectionResults.ESSInstances.Count -gt 0) { "Installed" } else { "Not Installed" })</div>
                     <div class="stat-label">ESS Status</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">$(if ($global:DetectionResults -and $global:DetectionResults.WFEInstances.Count -gt 0) { "Installed" } else { "Not Installed" })</div>
+                    <div class="stat-number">$(if ($detectionResults -and $detectionResults.WFEInstances.Count -gt 0) { "Installed" } else { "Not Installed" })</div>
                     <div class="stat-label">WFE Status</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">$(if ($sysInfo.SQLServer.IsInstalled) { "Installed" } else { "Not Installed" })</div>
+                    <div class="stat-number">$(if ($sysInfo.SQLServer -and $sysInfo.SQLServer.IsInstalled) { "Installed" } else { "Not Installed" })</div>
                     <div class="stat-label">SQL Server</div>
                 </div>
                 <div class="stat-card">
@@ -438,7 +448,7 @@ function New-ReportHTML {
                         </div>
                         <div class="info-item">
                             <span class="info-label">Deployment Type:</span>
-                            <span class="info-value">$(if ($global:DetectionResults) { $global:DetectionResults.DeploymentType } else { 'Unknown' })</span>
+                            <span class="info-value">$(if ($detectionResults) { $detectionResults.DeploymentType } else { 'Unknown' })</span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Operating System:</span>
