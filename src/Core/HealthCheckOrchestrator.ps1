@@ -34,7 +34,7 @@ function Start-ESSHealthChecks {
         Start-ValidationChecks -SystemInfo $systemInfo -DetectionResults $detectionResults
         
         # Generate report
-        $reportPath = New-HealthCheckReport -SystemInfo $systemInfo -DetectionResults $detectionResults
+        $reportPath = Start-HealthCheckReportGeneration -SystemInfo $systemInfo -DetectionResults $detectionResults
         
         # Display summary
         Show-HealthCheckSummary -SystemInfo $systemInfo -DetectionResults $detectionResults
@@ -155,7 +155,7 @@ function Start-ValidationChecks {
     }
 }
 
-function New-HealthCheckReport {
+function Start-HealthCheckReportGeneration {
     <#
     .SYNOPSIS
         Generates health check report
