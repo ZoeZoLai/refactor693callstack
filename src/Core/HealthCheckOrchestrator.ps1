@@ -29,7 +29,7 @@ function Start-ESSHealthChecks {
         Initialize-HealthCheckProcess
         
         # Execute health check workflow
-        $systemInfo = Get-SystemInformation
+        $systemInfo = Start-SystemInformationCollection
         $detectionResults = Get-ESSWFEDeployment -SystemInfo $systemInfo
         Start-ValidationChecks -SystemInfo $systemInfo -DetectionResults $detectionResults
         
@@ -68,7 +68,7 @@ function Initialize-HealthCheckProcess {
     Write-Verbose "Health Check Process initialized successfully"
 }
 
-function Get-SystemInformation {
+function Start-SystemInformationCollection {
     <#
     .SYNOPSIS
         Collects system information
