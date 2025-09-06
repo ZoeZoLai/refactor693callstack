@@ -82,7 +82,7 @@ function Start-ESSHealthChecks {
         . .\Core\HealthCheckOrchestrator.ps1
         
         # Use the function-based orchestrator pattern
-        $reportPath = Start-ESSHealthChecks
+        $reportPath = Start-ESSHealthChecksOrchestrator
         
         Write-Host "`nHealth Checks completed successfully!" -ForegroundColor Green
         Write-Host "Report generated at: $reportPath" -ForegroundColor Cyan

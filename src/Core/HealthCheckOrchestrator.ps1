@@ -10,7 +10,7 @@
     Version: 2.0
 #>
 
-function Start-ESSHealthChecks {
+function Start-ESSHealthChecksOrchestrator {
     <#
     .SYNOPSIS
         Starts the ESS Health Check process
