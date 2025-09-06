@@ -15,7 +15,6 @@ class ESSConfiguration {
     [hashtable]$DetectionResults
     [hashtable]$MinimumRequirements
     [hashtable]$ESSVersionCompatibility
-    [hashtable]$ReportSettings
     [hashtable]$APIHealthCheck
     [hashtable]$Performance
     
@@ -24,7 +23,6 @@ class ESSConfiguration {
         $this.DetectionResults = @{}
         $this.MinimumRequirements = @{}
         $this.ESSVersionCompatibility = @{}
-        $this.ReportSettings = @{}
         $this.APIHealthCheck = @{}
         $this.Performance = @{}
     }
@@ -95,11 +93,6 @@ function New-ESSConfiguration {
             }
         }
 
-        # Set report settings
-        $config.ReportSettings = @{
-            ReportOutputPath = Get-ReportOutputPath
-            ReportNameFormat = "ESS_PreUpgrade_HealthCheck_{0:yyyyMMdd_HHmmss}.html"
-        }
 
         # Set API Health Check Settings
         $config.APIHealthCheck = @{
@@ -207,21 +200,6 @@ function Update-ESSConfiguration {
     Write-Verbose "ESS configuration updated"
 }
 
-function Get-ReportOutputPath {
-    <#
-    .SYNOPSIS
-        Determines report output path
-    #>
-    param()
-
-    # Use temp path
-    if ($env:TEMP) {
-        return Join-Path $env:TEMP "ESSHealthCheckReports"
-    }
-
-    # Fallback to use user profile
-    return "$env:USERPROFILE\ESSHealthCheckReports"
-}
 
 function Get-MinimumDiskSpace {
     <#

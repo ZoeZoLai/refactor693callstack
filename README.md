@@ -28,32 +28,36 @@ The health checker follows a **3-phase approach**:
 This separation ensures each phase can be tested independently and makes the codebase highly maintainable.
 
 ```
-src/
-├── Core/                    # Foundation components
-│   ├── Config.ps1          # Configuration management
-│   ├── HealthCheckCore.ps1 # Result management & core utilities
-│   └── ReportGenerator.ps1 # HTML report generation
-├── Detection/              # Discovery modules
-│   ├── ESSDetection.ps1    # ESS installation detection
-│   ├── WFEDetection.ps1    # WFE installation detection
-│   ├── ESSHealthCheckAPI.ps1 # API health check functions
-│   └── DetectionOrchestrator.ps1 # Detection coordination
-├── SystemInfo/             # System information collection
-│   ├── OSInfo.ps1          # Operating system information
-│   ├── HardwareInfo.ps1    # Hardware & network information
-│   ├── IISInfo.ps1         # IIS configuration
-│   ├── SQLInfo.ps1         # SQL Server information
-│   └── SystemInfoOrchestrator.ps1 # System info collection coordination
-├── Validation/             # Validation modules
-│   ├── SystemRequirements.ps1 # System requirement validation
-│   ├── InfrastructureValidation.ps1 # Infrastructure validation
-│   ├── ESSValidation.ps1   # ESS-specific validation
-│   ├── ValidationOrchestrator.ps1 # Validation coordination
-│   └── SystemValidation.ps1 # Validation wrapper
-├── Utils/                  # Utility functions
-│   └── HelperFunctions.ps1 # Common helper functions
-├── tests/                  # Test files
-└── Reports/                # Generated HTML reports
+refactor693callstack/
+├── Reports/                # Generated HTML reports (user-accessible)
+├── src/                    # Source code (developers only)
+│   ├── Core/              # Foundation components
+│   │   ├── Config.ps1     # Configuration management
+│   │   ├── HealthCheckCore.ps1 # Result management & core utilities
+│   │   └── ReportGenerator.ps1 # HTML report generation
+│   ├── Detection/         # Discovery modules
+│   │   ├── ESSDetection.ps1 # ESS installation detection
+│   │   ├── WFEDetection.ps1 # WFE installation detection
+│   │   ├── ESSHealthCheckAPI.ps1 # API health check functions
+│   │   └── DetectionOrchestrator.ps1 # Detection coordination
+│   ├── SystemInfo/        # System information collection
+│   │   ├── OSInfo.ps1     # Operating system information
+│   │   ├── HardwareInfo.ps1 # Hardware & network information
+│   │   ├── IISInfo.ps1    # IIS configuration
+│   │   ├── SQLInfo.ps1    # SQL Server information
+│   │   └── SystemInfoOrchestrator.ps1 # System info collection coordination
+│   ├── Validation/        # Validation modules
+│   │   ├── SystemRequirements.ps1 # System requirement validation
+│   │   ├── InfrastructureValidation.ps1 # Infrastructure validation
+│   │   ├── ESSValidation.ps1 # ESS-specific validation
+│   │   ├── ValidationOrchestrator.ps1 # Validation coordination
+│   │   └── SystemValidation.ps1 # Validation wrapper
+│   ├── Utils/             # Utility functions
+│   │   └── HelperFunctions.ps1 # Common helper functions
+│   └── tests/             # Test files
+├── RunHealthCheck.ps1     # Main launcher script
+├── README.md              # This documentation
+└── .gitignore             # Git ignore rules
 ```
 
 ## 🚀 Features
@@ -142,6 +146,7 @@ Start-SystemValidation -SystemInfo $systemInfo -DetectionResults $detectionResul
 - **Summary Statistics**: Total checks, passed, failed, warnings
 
 ### HTML Report
+- **Location**: Generated in the `Reports/` folder at project root
 - **Executive Summary**: High-level system status
 - **Detailed Results**: Per-check results with explanations
 - **System Information**: Hardware, OS, IIS, SQL Server details
@@ -237,7 +242,7 @@ Step 3: Running validation checks...
 [PASS] ESS API Health Check - Overall Status : ESS instance is healthy
 
 Step 4: Generating health check report...
-Report generated successfully at: C:\path\to\Reports\ESS_HealthCheck_Report_20250906_223306.html
+Report generated successfully at: C:\path\to\refactor693callstack\Reports\ESS_HealthCheck_Report_20250906_223306.html
 
 === Health Check Summary ===
 System Information:
@@ -309,4 +314,6 @@ For issues or questions:
 - **✅ Improved Maintainability**: Clear separation of concerns with single responsibility per folder
 - **✅ Enhanced Testability**: Each phase can be tested independently
 - **✅ Better Organization**: Logical grouping of related functionality
+- **✅ User-Friendly Structure**: Reports folder moved to root level for easy access
+- **✅ Clean Source Code**: Source code isolated in `src/` folder, reports accessible at root
 - **✅ No Breaking Changes**: All existing functionality preserved

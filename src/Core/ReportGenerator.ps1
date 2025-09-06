@@ -46,7 +46,9 @@ function New-HealthCheckReport {
         
         # Determine output path with fallback to default
         if (-not $OutputPath) {
-            $OutputPath = Join-Path $PWD "Reports"
+            # Use root-level Reports folder (two levels up from src/Core)
+            $rootPath = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+            $OutputPath = Join-Path $rootPath "Reports"
         }
         
         # Create output directory if it doesn't exist
