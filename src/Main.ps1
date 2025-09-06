@@ -3,53 +3,41 @@
     ESS Pre-Upgrade Health Checker - Main Entry Point
 .DESCRIPTION
     Main entry point for the ESS Health Checker application
-    Following call stack principles with proper module loading and dependency management
+    Simplified structure with direct module loading
 .NOTES
     Author: Zoe Lai
-    Date: 30/07/2025
-    Version: 2.0
+    Date: 23/08/2025
+    Version: 2.0 - Simplified Structure
 #>
 
-# Import the module loader first
-. .\Core\ModuleLoader.ps1
+# Load all required modules in logical order
+Write-Host "Loading ESS Health Checker modules..." -ForegroundColor Yellow
 
-function Initialize-ESSHealthChecker {
-    <#
-    .SYNOPSIS
-        Initializes the ESS Health Checker application
-    .DESCRIPTION
-        Sets up the application environment and loads all required modules
-    #>
-    [CmdletBinding()]
-    param()
-    
-    try {
-        Write-Host "Initializing ESS Health Checker..." -ForegroundColor Yellow
-        
-        # Initialize module loader
-        Initialize-ModuleLoader
-        
-        # Load all modules in the correct order
-        Import-Modules
-        
-        # Test dependencies (temporarily disabled for debugging)
-        # Test-HealthCheckDependencies
-        
-        Write-Host "ESS Health Checker initialized successfully!" -ForegroundColor Green
-    }
-    catch {
-        Write-Error "Failed to initialize ESS Health Checker: $_"
-        throw
-    }
-}
+# Core modules first (dependencies for other modules)
+. .\Core\HealthCheckCore.ps1
+. .\Core\Config.ps1
+
+# Utility modules
+. .\modules\Utils\HelperFunctions.ps1
+
+# System modules (depends on Core modules)
+. .\System\SystemInfo.ps1
+. .\System\SystemValidation.ps1
+
+# Detection modules (depends on System modules)
+. .\Detection\ESSDetection.ps1
+
+# Report generation (depends on all other modules)
+. .\Core\ReportGenerator.ps1
+
+Write-Host "All modules loaded successfully!" -ForegroundColor Green
 
 function Start-ESSHealthChecks {
     <#
     .SYNOPSIS
-        Starts the ESS Health Check process using proper call stack principles
+        Starts the ESS Health Check process
     .DESCRIPTION
-        Uses the HealthCheckOrchestrator class to manage the entire health check workflow
-        following proper dependency injection and call stack principles
+        Runs the complete health check workflow with simplified structure
     .RETURNS
         Path to the generated report
     #>
@@ -59,30 +47,43 @@ function Start-ESSHealthChecks {
     try {
         Write-Host "Starting ESS Pre-Upgrade Health Checks..." -ForegroundColor Cyan
         
-        # Load required modules in dependency order to ensure classes are available
-        . .\Core\HealthCheckCore.ps1
-        . .\Core\Config.ps1
-        . .\modules\Utils\HelperFunctions.ps1
-        . .\modules\System\HardwareInfo.ps1
-        . .\modules\System\OSInfo.ps1
-        . .\modules\System\IISInfo.ps1
-        . .\modules\System\SQLInfo.ps1
-        . .\modules\System\SystemInfoOrchestrator.ps1
-        . .\modules\Detection\ESSDetection.ps1
-        . .\modules\Detection\WFEDetection.ps1
-        . .\modules\Detection\ESSHealthCheckAPI.ps1
-        . .\modules\Detection\DetectionOrchestrator.ps1
-        . .\modules\Validation\SystemRequirements.ps1
-        . .\modules\Validation\InfrastructureValidation.ps1
-        . .\modules\Validation\ESSValidation.ps1
-        . .\modules\Validation\ValidationOrchestrator.ps1
-        . .\Core\ReportGenerator.ps1
+        # Step 1: Collect system information
+        Write-Host "Step 1: Collecting system information..." -ForegroundColor Yellow
+        $systemInfo = Get-SystemInformation
         
-        # Import the main orchestrator after all dependent modules are loaded
-        . .\Core\HealthCheckOrchestrator.ps1
+        # Step 2: Detect ESS/WFE installations
+        Write-Host "Step 2: Detecting ESS/WFE installations..." -ForegroundColor Yellow
+        $detectionResults = Get-ESSWFEDetection -SystemInfo $systemInfo
         
-        # Use the function-based orchestrator pattern
-        $reportPath = Start-ESSHealthChecksOrchestrator
+        # Step 3: Run validation checks
+        Write-Host "Step 3: Running validation checks..." -ForegroundColor Yellow
+        Start-SystemValidation -SystemInfo $systemInfo -DetectionResults $detectionResults
+        
+        # Step 4: Generate report
+        Write-Host "Step 4: Generating health check report..." -ForegroundColor Yellow
+        $results = Get-HealthCheckResults
+        $reportPath = New-HealthCheckReport -Results $results -SystemInfo $systemInfo -DetectionResults $detectionResults
+        
+        # Step 5: Display summary
+        Write-Host "`n=== Health Check Summary ===" -ForegroundColor Magenta
+        Write-Host "System Information:" -ForegroundColor White
+        Write-Host "  Computer Name: $($systemInfo.ComputerName)" -ForegroundColor White
+        Write-Host "  OS Version: $($systemInfo.OS.Caption)" -ForegroundColor White
+        Write-Host "  IIS Installed: $($systemInfo.IIS.IsInstalled)" -ForegroundColor White
+        
+        Write-Host "Detection Results:" -ForegroundColor White
+        Write-Host "  ESS Instances: $($detectionResults.ESSInstances.Count)" -ForegroundColor White
+        Write-Host "  WFE Instances: $($detectionResults.WFEInstances.Count)" -ForegroundColor White
+        Write-Host "  Deployment Type: $($detectionResults.DeploymentType)" -ForegroundColor White
+        
+        $summary = Get-HealthCheckSummary
+        Write-Host "Health Check Results:" -ForegroundColor White
+        Write-Host "  Total Checks: $($summary.Total)" -ForegroundColor White
+        Write-Host "  Passed: $($summary.Pass)" -ForegroundColor Green
+        Write-Host "  Failed: $($summary.Fail)" -ForegroundColor Red
+        Write-Host "  Warnings: $($summary.Warning)" -ForegroundColor Yellow
+        Write-Host "  Info: $($summary.Info)" -ForegroundColor Cyan
+        Write-Host "=============================" -ForegroundColor Magenta
         
         Write-Host "`nHealth Checks completed successfully!" -ForegroundColor Green
         Write-Host "Report generated at: $reportPath" -ForegroundColor Cyan
@@ -93,7 +94,4 @@ function Start-ESSHealthChecks {
         throw
     }
 }
-
-# Initialize the application when the script is loaded
-Initialize-ESSHealthChecker
 
