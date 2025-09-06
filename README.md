@@ -1,335 +1,284 @@
 # ESS Pre-Upgrade Health Checker
 
-A comprehensive PowerShell-based health check system for ESS (Employee Self-Service) pre-upgrade validation, designed following **Call Stack Principles** for maintainability, testability, and clear dependency management.
+A comprehensive PowerShell-based health checking tool for MYOB PayGlobal ESS (Employee Self Service) systems before upgrade operations.
 
 ## 🎯 Overview
 
-This tool performs comprehensive health checks on ESS and WFE (Web Front End) deployments to ensure system readiness for upgrades. It validates system requirements, detects installations, checks connectivity, and generates detailed reports.
+The ESS Pre-Upgrade Health Checker is designed to validate system readiness for ESS upgrades by performing comprehensive checks on:
 
-## 🏗️ Architecture - Call Stack Principles
+- **System Requirements**: Hardware, OS, .NET Framework, IIS
+- **ESS/WFE Detection**: Automatic discovery of ESS and WFE installations
+- **Database Connectivity**: SQL Server connections and database validation
+- **API Health Checks**: ESS API endpoint validation
+- **Configuration Validation**: Web.config encryption, authentication modes
+- **Version Compatibility**: ESS and PayGlobal version compatibility checks
 
-### Core Design Philosophy
+## 🏗️ Architecture
 
-The project follows **Call Stack Principles** to eliminate global state dependencies and ensure clear data flow:
-
-- **No Global Variables**: All data is passed explicitly through parameters
-- **Dependency Injection**: Functions receive required data as parameters
-- **Single Responsibility**: Each module has a clear, focused purpose
-- **Testable Components**: Functions can be tested in isolation
-- **Clear Data Flow**: Explicit parameter passing shows dependencies
-
-### Project Structure
+The project follows **Call Stack Principles** with clean dependency injection and single responsibility design:
 
 ```
-refactor693callstack/
-├── RunHealthCheck.ps1              # Main launcher script
-├── src/
-│   ├── Main.ps1                    # Application entry point
-│   ├── Core/
-│   │   ├── Config.ps1              # Configuration management
-│   │   ├── HealthCheckCore.ps1     # Core health check functions
-│   │   ├── HealthCheckOrchestrator.ps1  # Main orchestrator class
-│   │   └── ReportGenerator.ps1     # HTML report generation
-│   ├── modules/
-│   │   ├── System/                 # System information collection
-│   │   │   ├── SystemInfoOrchestrator.ps1
-│   │   │   ├── HardwareInfo.ps1
-│   │   │   ├── OSInfo.ps1
-│   │   │   ├── IISInfo.ps1
-│   │   │   └── SQLInfo.ps1
-│   │   ├── Detection/              # ESS/WFE detection
-│   │   │   ├── DetectionOrchestrator.ps1
-│   │   │   ├── ESSDetection.ps1
-│   │   │   ├── WFEDetection.ps1
-│   │   │   └── ESSHealthCheckAPI.ps1
-│   │   ├── Validation/             # System validation
-│   │   │   ├── ValidationOrchestrator.ps1
-│   │   │   ├── SystemRequirements.ps1
-│   │   │   ├── InfrastructureValidation.ps1
-│   │   │   └── ESSValidation.ps1
-│   │   └── Utils/                  # Utility functions
-│   │       └── HelperFunctions.ps1
-│   └── tests/                      # Test files
-└── README.md                       # This file
+src/
+├── Core/                    # Foundation components
+│   ├── Config.ps1          # Configuration management
+│   ├── HealthCheckCore.ps1 # Result management & core utilities
+│   └── ReportGenerator.ps1 # HTML report generation
+├── Detection/              # ESS/WFE detection modules
+│   ├── ESSDetection.ps1    # ESS installation detection
+│   ├── WFEDetection.ps1    # WFE installation detection
+│   ├── ESSHealthCheckAPI.ps1 # API health check functions
+│   └── DetectionOrchestrator.ps1 # Detection coordination
+├── System/                 # System information & validation
+│   ├── SystemInfoOrchestrator.ps1 # System info collection
+│   ├── OSInfo.ps1          # Operating system information
+│   ├── HardwareInfo.ps1    # Hardware & network information
+│   ├── IISInfo.ps1         # IIS configuration
+│   ├── SQLInfo.ps1         # SQL Server information
+│   ├── SystemRequirements.ps1 # System requirement validation
+│   ├── InfrastructureValidation.ps1 # Infrastructure validation
+│   ├── ESSValidation.ps1   # ESS-specific validation
+│   ├── ValidationOrchestrator.ps1 # Validation coordination
+│   └── SystemValidation.ps1 # Validation wrapper
+├── Utils/                  # Utility functions
+│   └── HelperFunctions.ps1 # Common helper functions
+├── tests/                  # Test files
+└── Reports/                # Generated HTML reports
 ```
 
-## 🚀 Quick Start
+## 🚀 Features
 
-### Prerequisites
+### ✅ System Requirements Validation
+- **Hardware**: Memory, CPU cores, processor speed, disk space
+- **Operating System**: Windows Server compatibility
+- **Software**: .NET Framework, IIS installation and configuration
+- **Network**: Connectivity and adapter validation
 
-- **PowerShell 5.1+** or **PowerShell Core 6.0+**
-- **Windows Server** with IIS installed
-- **Administrator privileges** (required for system checks)
-- **ESS/WFE deployment** to validate
+### ✅ ESS/WFE Detection
+- **Automatic Discovery**: Finds all ESS and WFE installations
+- **Configuration Parsing**: Reads payglobal.config and tenants.config
+- **Version Detection**: Extracts ESS and PayGlobal versions
+- **Database Connection**: Validates database connectivity
 
-### Running the Health Check
+### ✅ API Health Checks
+- **Endpoint Validation**: Tests ESS API endpoints
+- **Component Status**: Checks PayGlobal Database, SelfService Software, Bridge
+- **Response Parsing**: Handles JSON/XML health check responses
+- **Error Handling**: Comprehensive error reporting
 
-1. **Clone or download** the project to your system
-2. **Open PowerShell as Administrator**
-3. **Navigate** to the project directory
-4. **Run** the health check:
+### ✅ Configuration Validation
+- **Web.config Encryption**: Validates encryption for SingleSignOn
+- **Authentication Modes**: Checks PayGlobal vs AlternativeUsername
+- **Database Connections**: Validates connection strings
+- **SSL Certificates**: HTTPS configuration validation
+
+### ✅ Report Generation
+- **HTML Reports**: Comprehensive, styled HTML reports
+- **Executive Summary**: High-level status overview
+- **Detailed Results**: Per-check results with explanations
+- **Recommendations**: Actionable upgrade guidance
+
+## 📋 Prerequisites
+
+- **PowerShell 5.1+** or **PowerShell Core 6+**
+- **Windows Server 2016+** or **Windows 10+**
+- **Administrator privileges** (for IIS and system information access)
+- **IIS Management Tools** (for IIS configuration access)
+- **SQL Server Management Tools** (for database connectivity)
+
+## 🛠️ Installation
+
+1. **Clone or Download** the project to your local machine
+2. **Navigate** to the project directory
+3. **Run as Administrator** for full functionality
 
 ```powershell
+# Navigate to project directory
+cd C:\path\to\refactor693callstack
+
+# Run the health checker
 .\RunHealthCheck.ps1
 ```
 
-### Expected Output
+## 📖 Usage
+
+### Basic Usage
+
+```powershell
+# Run complete health check
+.\RunHealthCheck.ps1
+
+# Run with verbose output
+.\RunHealthCheck.ps1 -Verbose
+```
+
+### Advanced Usage
+
+```powershell
+# Load modules manually for testing
+. .\src\Main.ps1
+
+# Run individual components
+$systemInfo = Get-SystemInformation
+$detectionResults = Get-ESSWFEDetection -SystemInfo $systemInfo
+Start-SystemValidation -SystemInfo $systemInfo -DetectionResults $detectionResults
+```
+
+## 📊 Output
+
+### Console Output
+- **Real-time Progress**: Step-by-step execution status
+- **Color-coded Results**: PASS (Green), FAIL (Red), WARNING (Yellow), INFO (Blue)
+- **Summary Statistics**: Total checks, passed, failed, warnings
+
+### HTML Report
+- **Executive Summary**: High-level system status
+- **Detailed Results**: Per-check results with explanations
+- **System Information**: Hardware, OS, IIS, SQL Server details
+- **ESS/WFE Instances**: Detected installations with configuration
+- **Recommendations**: Actionable upgrade guidance
+
+## 🔧 Configuration
+
+The health checker uses a configuration system with sensible defaults:
+
+```powershell
+# Create custom configuration
+$config = New-ESSConfiguration
+
+# Modify settings
+$config.MinimumRequirements.MinimumMemoryGB = 16
+$config.APIHealthCheck.DefaultTimeoutSeconds = 120
+
+# Use custom configuration
+Get-ESSConfiguration -Configuration $config
+```
+
+## 🧪 Testing
+
+The project includes comprehensive test files:
+
+```powershell
+
+# Simple functionality test
+. .\src\tests\SimpleTest.ps1
+```
+
+## 🏛️ Call Stack Principles
+
+This project follows strict call stack principles:
+
+### ✅ Dependency Injection
+- Functions receive data through explicit parameters
+- No global state dependencies
+- Clear input/output contracts
+
+### ✅ Single Responsibility
+- Each module has one clear purpose
+- Functions are focused and do one thing well
+- Clear separation of concerns
+
+### ✅ Testability
+- Functions can be tested in isolation
+- Mock data support for all functions
+- No hidden dependencies
+
+### ✅ Maintainability
+- Clear data flow through function parameters
+- Easy to understand and modify
+- Consistent patterns throughout
+
+## 📝 Example Output
 
 ```
 ESS Pre-Upgrade Health Checker
-================================
-Loading ESS Health Checker modules...
-Initializing ESS Health Checker...
-Starting health checks...
-Starting ESS Pre-Upgrade Health Checks...
+===============================
 
+Starting ESS Pre-Upgrade Health Checks...
 Step 1: Collecting system information...
-Step 2: Detecting ESS/WFE deployment...
+  Collecting basic system information...
+  Collecting OS information...
+  Collecting hardware information...
+  Collecting network information...
+  Collecting IIS information...
+  Collecting registry information...
+  Collecting SQL Server information...
+System information collection completed successfully
+
+Step 2: Detecting ESS/WFE installations...
+[PASS] Found 3 ESS installation(s)
+[PASS] Found 3 WFE installation(s)
+[PASS] Deployment Type: Combined (ESS + WFE)
+
 Step 3: Running validation checks...
+[PASS] System Requirements - Memory : Sufficient memory available
+[PASS] System Requirements - CPU Cores : Sufficient CPU cores available
+[PASS] Database Connectivity - ESS - PG Database Connection : Successfully connected
+[PASS] ESS API Health Check - Overall Status : ESS instance is healthy
+
 Step 4: Generating health check report...
+Report generated successfully at: C:\path\to\Reports\ESS_HealthCheck_Report_20250906_223306.html
 
 === Health Check Summary ===
 System Information:
-  Computer Name: SERVER01
-  OS Version: Windows Server 2019
+  Computer Name: SERVER-NAME
+  OS Version: Microsoft Windows Server 2019
   IIS Installed: True
-
 Detection Results:
   ESS Instances: 3
   WFE Instances: 3
   Deployment Type: Combined
-
 Health Check Results:
   Total Checks: 50
   Passed: 44
   Failed: 1
   Warnings: 0
   Info: 5
-
-Health Checks completed successfully!
-Report generated at: C:\Reports\ESS_HealthCheck_Report_20241201_143022.html
 ```
 
-## 🔧 Call Stack Implementation
-
-### Execution Flow
-
-```
-RunHealthCheck.ps1
-└── Main.ps1 (Start-ESSHealthChecks)
-    └── HealthCheckOrchestrator
-        ├── Initialize()
-        ├── CollectSystemInformation()
-        │   └── SystemInformationManager
-        │       ├── Get-OSInformation()
-        │       ├── Get-HardwareInformation()
-        │       ├── Get-NetworkInformation()
-        │       ├── Get-IISInformation()
-        │       └── Get-SQLServerInformation()
-        ├── DetectESSWFEDeployment()
-        │   └── DetectionManager
-        │       ├── Test-IISInstallation()
-        │       ├── Find-ESSInstances()
-        │       └── Find-WFEInstances()
-        ├── RunValidationChecks()
-        │   └── ValidationManager
-        │       ├── Test-SystemRequirements()
-        │       ├── Test-IISConfiguration()
-        │       ├── Test-NetworkConnectivity()
-        │       ├── Test-SecurityPermissions()
-        │       ├── Test-ESSWFEDetection()
-        │       ├── Test-DatabaseConnectivity()
-        │       ├── Test-WebConfigEncryptionValidation()
-        │       ├── Test-ESSVersionValidation()
-        │       ├── Test-ESSHTTPSValidation()
-        │       └── Test-ESSAPIHealthCheckValidation()
-        ├── GenerateReport()
-        │   └── New-HealthCheckReport()
-        └── DisplaySummary()
-```
-
-### Key Classes
-
-#### HealthCheckOrchestrator
-- **Purpose**: Main coordinator for the entire health check process
-- **Responsibilities**: 
-  - Manages execution flow
-  - Coordinates between different managers
-  - Handles error propagation
-  - Maintains state for the health check session
-
-#### SystemInformationManager
-- **Purpose**: Collects comprehensive system information
-- **Data Collected**:
-  - Operating system details
-  - Hardware specifications
-  - Network configuration
-  - IIS installation and configuration
-  - SQL Server information
-  - Registry settings
-
-#### DetectionManager
-- **Purpose**: Detects ESS and WFE installations
-- **Capabilities**:
-  - IIS installation validation
-  - ESS instance discovery
-  - WFE instance discovery
-  - Deployment type determination
-
-#### ValidationManager
-- **Purpose**: Performs comprehensive system validation
-- **Validation Categories**:
-  - System requirements (CPU, memory, disk space)
-  - IIS configuration
-  - Network connectivity
-  - Security permissions
-  - Database connectivity
-  - ESS version compatibility
-  - API health checks
-
-## 📊 Health Check Categories
-
-### 1. System Requirements
-- **CPU**: Minimum 2 GHz, 4+ cores
-- **Memory**: Minimum 32 GB RAM
-- **Disk Space**: Minimum 10 GB free space
-- **Operating System**: Windows Server 2012 R2+
-- **IIS**: Version 7.5+
-- **.NET Framework**: Version 4.8+
-
-### 2. ESS/WFE Detection
-- **ESS Installations**: Locates and validates ESS instances
-- **WFE Installations**: Identifies Web Front End components
-- **Deployment Types**: Standalone, Combined, or Distributed
-
-### 3. Infrastructure Validation
-- **IIS Configuration**: Site and application pool validation
-- **Network Connectivity**: Internet and local network access
-- **Security Permissions**: Administrator rights verification
-- **File System Access**: Read/write permissions validation
-
-### 4. ESS-Specific Validation
-- **Database Connectivity**: SQL Server connection tests
-- **Web.Config Encryption**: Authentication encryption validation
-- **Version Compatibility**: ESS and PayGlobal version checks
-- **HTTPS Usage**: Security protocol validation
-- **API Health**: ESS API endpoint health checks
-
-## 📋 Configuration
-
-### Default Configuration
-The system uses built-in default values for:
-- **Report Output Path**: `./Reports/`
-- **Report Name Format**: `ESS_HealthCheck_Report_{timestamp}.html`
-- **API Timeouts**: 30 seconds
-- **Retry Attempts**: 3
-
-### Custom Configuration
-To customize settings, modify `src/Core/Config.ps1`:
-
-```powershell
-# Example configuration customization
-$ESSConfig = @{
-    ReportSettings = @{
-        ReportOutputPath = "C:\CustomReports\"
-        ReportNameFormat = "Custom_ESS_Report_{0:yyyyMMdd}.html"
-    }
-    APIHealthCheck = @{
-        ConnectionTimeoutSeconds = 60
-        ReadWriteTimeoutSeconds = 120
-        MaxRetries = 5
-    }
-}
-```
-
-## 🧪 Testing
-
-### Running Tests
-```powershell
-# Run all tests
-.\src\tests\Test-HealthCheck.ps1
-
-# Run specific test categories
-.\src\tests\Test-SystemValidation.ps1
-.\src\tests\Test-ESSDetection.ps1
-```
-
-### Test Coverage
-- **Unit Tests**: Individual function testing
-- **Integration Tests**: Module interaction testing
-- **End-to-End Tests**: Complete workflow validation
-
-## 🔍 Troubleshooting
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-#### 1. "Access Denied" Errors
-**Solution**: Run PowerShell as Administrator
+1. **"Insufficient permissions"**
+   - Run PowerShell as Administrator
+   - Ensure IIS Management Tools are installed
 
-#### 2. "Module Not Found" Errors
-**Solution**: Ensure all files are in the correct directory structure
+2. **"IIS modules not found"**
+   - Install IIS Management Tools
+   - Enable IIS Management Console
 
-#### 3. "IIS Not Installed" Warnings
-**Solution**: Install IIS and required features
+3. **"Database connection failed"**
+   - Verify SQL Server is running
+   - Check connection strings in payglobal.config
+   - Ensure SQL Server allows remote connections
 
-#### 4. "Database Connection Failed"
-**Solution**: Verify SQL Server is running and accessible
-
-#### 5. "ESS API Health Check Failed"
-**Solution**: Check ESS service status and network connectivity
-
-### Debug Mode
-Enable verbose logging:
-```powershell
-$VerbosePreference = "Continue"
-.\RunHealthCheck.ps1
-```
-
-### Log Files
-Check the generated HTML report for detailed results and recommendations.
-
-## 📈 Performance
-
-### Typical Execution Time
-- **System Information Collection**: 5-10 seconds
-- **ESS/WFE Detection**: 10-15 seconds
-- **Validation Checks**: 30-60 seconds
-- **Report Generation**: 5-10 seconds
-- **Total**: 1-2 minutes
-
-### Resource Usage
-- **Memory**: ~50-100 MB
-- **CPU**: Low impact
-- **Disk**: Minimal (report generation only)
+4. **"ESS API health check failed"**
+   - Verify ESS application is running
+   - Check IIS application pool status
+   - Validate API endpoint URLs
 
 ## 🤝 Contributing
 
-### Development Guidelines
-1. **Follow Call Stack Principles**: No global variables, explicit parameter passing
-2. **Single Responsibility**: Each function/module has one clear purpose
-3. **Error Handling**: Proper try-catch blocks with meaningful error messages
-4. **Documentation**: Comment all functions with proper PowerShell help
-5. **Testing**: Write tests for new functionality
-
-### Code Style
-- Use **PascalCase** for function names
-- Use **camelCase** for variables
-- Include **comment-based help** for all functions
-- Follow **PowerShell best practices**
+1. Follow the established call stack principles
+2. Maintain single responsibility for each module
+3. Use dependency injection for all functions
+4. Add comprehensive error handling
+5. Include verbose logging for debugging
 
 ## 📄 License
 
-This project is developed for internal use. Please refer to your organization's software usage policies.
+This project is proprietary software for MYOB PayGlobal ESS systems.
 
 ## 📞 Support
 
-For technical support or questions:
-- **Documentation**: Check the generated HTML reports for detailed information
-- **Logs**: Review PowerShell output for error details
-- **Configuration**: Verify settings in `src/Core/Config.ps1`
+For issues or questions:
+1. Check the troubleshooting section
+2. Review the generated HTML report for detailed error information
+3. Run with `-Verbose` flag for detailed logging
+4. Contact the development team
 
 ---
 
-**Version**: 2.0  
-**Last Updated**: December 2024  
-**Compatibility**: ESS 5.4+, Windows Server 2012 R2+
+**Version**: 2.0 - Call Stack Principles  
+**Last Updated**: September 2025  
+**Author**: Zoe Lai

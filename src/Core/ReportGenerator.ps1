@@ -46,11 +46,7 @@ function New-HealthCheckReport {
         
         # Determine output path with fallback to default
         if (-not $OutputPath) {
-            if ($global:ESSConfig -and $global:ESSConfig.ReportOutputPath) {
-                $OutputPath = $global:ESSConfig.ReportOutputPath
-            } else {
-                $OutputPath = Join-Path $PWD "Reports"
-            }
+            $OutputPath = Join-Path $PWD "Reports"
         }
         
         # Create output directory if it doesn't exist
@@ -58,12 +54,8 @@ function New-HealthCheckReport {
             New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
         }
         
-        # Generate report filename with fallback to default
-        if ($global:ESSConfig -and $global:ESSConfig.ReportNameFormat) {
-            $reportName = $global:ESSConfig.ReportNameFormat -f (Get-Date)
-        } else {
-            $reportName = "ESS_HealthCheck_Report_{0:yyyyMMdd_HHmmss}.html" -f (Get-Date)
-        }
+        # Generate report filename with default format
+        $reportName = "ESS_HealthCheck_Report_{0:yyyyMMdd_HHmmss}.html" -f (Get-Date)
         $reportPath = Join-Path $OutputPath $reportName
         
         # Generate HTML content
@@ -533,7 +525,7 @@ function New-ReportHTML {
                         <tbody>
 "@
                         foreach ($ess in $detectionResults.ESSInstances) {
-                            $poolIdentity = Get-AppPoolIdentity -AppPoolName $ess.ApplicationPool
+                            $poolIdentity = Get-AppPoolIdentity -AppPoolName $ess.ApplicationPool -SystemInfo $sysInfo
                             $webServerUrl = Get-WebServerURL -ESSInstance $ess
                             
                             # Format site name to include application alias using helper function
@@ -589,7 +581,7 @@ function New-ReportHTML {
                         <tbody>
 "@
                         foreach ($wfe in $detectionResults.WFEInstances) {
-                            $poolIdentity = Get-AppPoolIdentity -AppPoolName $wfe.ApplicationPool
+                            $poolIdentity = Get-AppPoolIdentity -AppPoolName $wfe.ApplicationPool -SystemInfo $sysInfo
                             
                             # Format site name to include application alias using helper function
                             $siteNameDisplay = Get-FormattedSiteIdentifier -SiteName $wfe.SiteName -ApplicationPath $wfe.ApplicationPath

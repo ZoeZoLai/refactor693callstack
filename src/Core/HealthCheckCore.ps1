@@ -2,20 +2,118 @@
 .SYNOPSIS
     Core health check utilities and result management
 .DESCRIPTION
-    Provides centralized functions for health check result management and shared utilities
+    Provides centralized functions for health check result management following call stack principles
 .NOTES
     Author: Zoe Lai
-    Date: 04/08/2025
-    Version: 1.0
+    Date: 23/08/2025
+    Version: 2.0 - Call Stack Principles
 #>
 
-# Initialize global results array
-$global:HealthCheckResults = @()
+# Health Check Result Manager Class
+class HealthCheckResultManager {
+    [System.Collections.ArrayList]$Results
+    
+    HealthCheckResultManager() {
+        $this.Results = [System.Collections.ArrayList]::new()
+    }
+    
+    [void]AddResult([string]$Category, [string]$Check, [string]$Status, [string]$Message) {
+        $result = @{
+            Category = $Category
+            Check = $Check
+            Status = $Status
+            Message = $Message
+            Timestamp = Get-Date
+        }
+        
+        $this.Results.Add([PSCustomObject]$result) | Out-Null
+        
+        # Debug: Log when FAIL results are added
+        if ($Status -eq "FAIL") {
+            Write-Verbose "Added FAIL result: $Category - $Check (Total results now: $($this.Results.Count))"
+        }
+        
+        # Display result with appropriate color
+        $color = switch ($Status) {
+            "PASS" { "Green" }
+            "FAIL" { "Red" }
+            "WARNING" { "Yellow" }
+            "INFO" { "Cyan" }
+            default { "White" }
+        }
+        
+        Write-Host "[$Status] $Category - $Check : $Message" -ForegroundColor $color
+    }
+    
+    [array]GetResults() {
+        return $this.Results.ToArray()
+    }
+    
+    [void]ClearResults() {
+        $this.Results.Clear()
+        Write-Verbose "Health check results cleared"
+    }
+    
+    [hashtable]GetSummary() {
+        $totalChecks = $this.Results.Count
+        $passChecks = 0
+        $failChecks = 0
+        $warningChecks = 0
+        $infoChecks = 0
+        
+        foreach ($result in $this.Results) {
+            switch ($result.Status) {
+                "PASS" { $passChecks++ }
+                "FAIL" { $failChecks++ }
+                "WARNING" { $warningChecks++ }
+                "INFO" { $infoChecks++ }
+            }
+        }
+        
+        return @{
+            Total = $totalChecks
+            Pass = $passChecks
+            Fail = $failChecks
+            Warning = $warningChecks
+            Info = $infoChecks
+        }
+    }
+    
+    [array]GetResultsByCategory([string]$Category) {
+        return $this.Results | Where-Object { $_.Category -eq $Category }
+    }
+    
+    [array]GetResultsByStatus([string]$Status) {
+        return $this.Results | Where-Object { $_.Status -eq $Status }
+    }
+}
+
+# Global result manager instance (singleton pattern for backward compatibility)
+$script:HealthCheckManager = $null
+
+function Get-HealthCheckManager {
+    <#
+    .SYNOPSIS
+        Gets the global health check result manager instance
+    .DESCRIPTION
+        Returns the singleton HealthCheckResultManager instance
+    .RETURNS
+        HealthCheckResultManager instance
+    #>
+    [CmdletBinding()]
+    param()
+    
+    if ($null -eq $script:HealthCheckManager) {
+        $script:HealthCheckManager = [HealthCheckResultManager]::new()
+    }
+    
+    return $script:HealthCheckManager
+}
 
 function Add-HealthCheckResult {
     <#
     .SYNOPSIS
-        Adds a health check result to the global results array
+        Adds a health check result using dependency injection
     .PARAMETER Category
         Category of the health check
     .PARAMETER Check
@@ -24,6 +122,8 @@ function Add-HealthCheckResult {
         Status of the check (PASS, FAIL, WARNING, INFO)
     .PARAMETER Message
         Detailed message about the check result
+    .PARAMETER Manager
+        Optional HealthCheckResultManager instance (for testing)
     #>
     [CmdletBinding()]
     param(
@@ -38,141 +138,124 @@ function Add-HealthCheckResult {
         [string]$Status,
         
         [Parameter(Mandatory = $true)]
-        [string]$Message
+        [string]$Message,
+        
+        [Parameter(Mandatory = $false)]
+        [HealthCheckResultManager]$Manager = $null
     )
-
-    $result = @{
-        Category = $Category
-        Check = $Check
-        Status = $Status
-        Message = $Message
-        Timestamp = Get-Date
+    
+    if ($null -eq $Manager) {
+        $Manager = Get-HealthCheckManager
     }
     
-    $global:HealthCheckResults += [PSCustomObject]$result
-    
-    # Debug: Log when FAIL results are added
-    if ($Status -eq "FAIL") {
-        Write-Verbose "Added FAIL result: $Category - $Check (Total results now: $($global:HealthCheckResults.Count))"
-    }
-    
-    # Display result with appropriate color
-    $color = switch ($Status) {
-        "PASS" { "Green" }
-        "FAIL" { "Red" }
-        "WARNING" { "Yellow" }
-        "INFO" { "Cyan" }
-        default { "White" }
-    }
-    
-    Write-Host "[$Status] $Category - $Check : $Message" -ForegroundColor $color
+    $Manager.AddResult($Category, $Check, $Status, $Message)
 }
 
 function Get-HealthCheckResults {
     <#
     .SYNOPSIS
-        Gets all health check results
+        Gets all health check results using dependency injection
     .DESCRIPTION
-        Returns the global health check results array
+        Returns all health check results from the manager
+    .PARAMETER Manager
+        Optional HealthCheckResultManager instance (for testing)
     .RETURNS
         Array of health check results
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [Parameter(Mandatory = $false)]
+        [HealthCheckResultManager]$Manager = $null
+    )
     
-    return $global:HealthCheckResults
+    if ($null -eq $Manager) {
+        $Manager = Get-HealthCheckManager
+    }
+    
+    return $Manager.GetResults()
 }
 
 function Clear-HealthCheckResults {
     <#
     .SYNOPSIS
-        Clears all health check results
+        Clears all health check results using dependency injection
     .DESCRIPTION
-        Resets the global health check results array
+        Resets the health check results in the manager
+    .PARAMETER Manager
+        Optional HealthCheckResultManager instance (for testing)
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [Parameter(Mandatory = $false)]
+        [HealthCheckResultManager]$Manager = $null
+    )
     
-    $global:HealthCheckResults = @()
-    Write-Verbose "Health check results cleared"
+    if ($null -eq $Manager) {
+        $Manager = Get-HealthCheckManager
+    }
+    
+    $Manager.ClearResults()
 }
 
 function Get-HealthCheckSummary {
     <#
     .SYNOPSIS
-        Gets a summary of health check results
+        Gets a summary of health check results using dependency injection
     .DESCRIPTION
         Returns statistics about the health check results
+    .PARAMETER Manager
+        Optional HealthCheckResultManager instance (for testing)
     .RETURNS
         Object containing summary statistics
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [Parameter(Mandatory = $false)]
+        [HealthCheckResultManager]$Manager = $null
+    )
     
-    $totalChecks = $global:HealthCheckResults.Count
-    $passChecks = ($global:HealthCheckResults | Where-Object { $_.Status -eq "PASS" }).Count
-    
-    # Count FAIL results manually to avoid Where-Object issues
-    $failChecks = 0
-    foreach ($result in $global:HealthCheckResults) {
-        if ($result.Status -eq "FAIL") {
-            $failChecks++
-        }
+    if ($null -eq $Manager) {
+        $Manager = Get-HealthCheckManager
     }
-    # Count warnings manually instead of using Where-Object
-    $warningChecks = 0
-    foreach ($result in $global:HealthCheckResults) {
-        if ($result.Status -eq "WARNING") {
-            $warningChecks++
-        }
-    }
-    $infoChecks = ($global:HealthCheckResults | Where-Object { $_.Status -eq "INFO" }).Count
     
-    # Debug: Log the actual status values found
-    Write-Verbose "Summary calculation - Total: $totalChecks, Pass: $passChecks, Fail: $failChecks, Warning: $warningChecks, Info: $infoChecks"
-    Write-Verbose "All status values found: $($global:HealthCheckResults.Status | Sort-Object -Unique)"
-    
-    # Debug: Check FAIL filter specifically
-    $failResults = $global:HealthCheckResults | Where-Object { $_.Status -eq "FAIL" }
-    Write-Verbose "FAIL filter results count: $($failResults.Count)"
-    
-
-    
-
-    
-    return @{
-        Total = $totalChecks
-        Pass = $passChecks
-        Fail = $failChecks
-        Warning = $warningChecks
-        Info = $infoChecks
-    }
+    return $Manager.GetSummary()
 }
 
 function Get-HealthCheckResultsByCategory {
     <#
     .SYNOPSIS
-        Gets health check results filtered by category
+        Gets health check results filtered by category using dependency injection
     .PARAMETER Category
         Category to filter by
+    .PARAMETER Manager
+        Optional HealthCheckResultManager instance (for testing)
     .RETURNS
         Array of health check results for the specified category
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Category
+        [string]$Category,
+        
+        [Parameter(Mandatory = $false)]
+        [HealthCheckResultManager]$Manager = $null
     )
     
-    return $global:HealthCheckResults | Where-Object { $_.Category -eq $Category }
+    if ($null -eq $Manager) {
+        $Manager = Get-HealthCheckManager
+    }
+    
+    return $Manager.GetResultsByCategory($Category)
 }
 
 function Get-HealthCheckResultsByStatus {
     <#
     .SYNOPSIS
-        Gets health check results filtered by status
+        Gets health check results filtered by status using dependency injection
     .PARAMETER Status
         Status to filter by (PASS, FAIL, WARNING, INFO)
+    .PARAMETER Manager
+        Optional HealthCheckResultManager instance (for testing)
     .RETURNS
         Array of health check results for the specified status
     #>
@@ -180,8 +263,15 @@ function Get-HealthCheckResultsByStatus {
     param(
         [Parameter(Mandatory = $true)]
         [ValidateSet("PASS", "FAIL", "WARNING", "INFO")]
-        [string]$Status
+        [string]$Status,
+        
+        [Parameter(Mandatory = $false)]
+        [HealthCheckResultManager]$Manager = $null
     )
     
-    return $global:HealthCheckResults | Where-Object { $_.Status -eq $Status }
-} 
+    if ($null -eq $Manager) {
+        $Manager = Get-HealthCheckManager
+    }
+    
+    return $Manager.GetResultsByStatus($Status)
+}

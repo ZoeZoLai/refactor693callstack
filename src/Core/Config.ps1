@@ -30,15 +30,21 @@ class ESSConfiguration {
     }
 }
 
-# Global configuration instance
-$script:ESSConfig = $null
+# Note: Global configuration removed to follow call stack principles
+# Use New-ESSConfiguration() and dependency injection instead
 
-function Initialize-ESSConfiguration {
+function New-ESSConfiguration {
     <#
     .SYNOPSIS
-        Initializes ESS Health Checker configuration based on current system info
+        Creates a new ESS Health Checker configuration instance
     .DESCRIPTION
-        Determines configuration for both ESS and WFE components using dependency injection
+        Creates a new configuration instance using dependency injection
+    .PARAMETER SystemInfo
+        Optional system information to include in configuration
+    .PARAMETER DetectionResults
+        Optional detection results to include in configuration
+    .RETURNS
+        ESSConfiguration instance
     #>
     [CmdletBinding()]
     param(
@@ -50,23 +56,23 @@ function Initialize-ESSConfiguration {
     )
 
     try {
-        Write-Verbose "Initializing Health Checker configuration based on system information..."
+        Write-Verbose "Creating new ESS Health Checker configuration..."
 
         # Create new configuration instance
-        $script:ESSConfig = [ESSConfiguration]::new()
+        $config = [ESSConfiguration]::new()
         
         # Set system information if provided
         if ($SystemInfo) {
-            $script:ESSConfig.SystemInfo = $SystemInfo
+            $config.SystemInfo = $SystemInfo
         }
         
         # Set detection results if provided
         if ($DetectionResults) {
-            $script:ESSConfig.DetectionResults = $DetectionResults
+            $config.DetectionResults = $DetectionResults
         }
 
         # Set minimum requirements
-        $script:ESSConfig.MinimumRequirements = @{
+        $config.MinimumRequirements = @{
             MinimumDiskSpaceGB = Get-MinimumDiskSpace
             MinimumMemoryGB = Get-MinimumMemory
             MinimumCores = Get-MinimumCores
@@ -78,7 +84,7 @@ function Initialize-ESSConfiguration {
         }
 
         # Set ESS Version Compatibility
-        $script:ESSConfig.ESSVersionCompatibility = @{
+        $config.ESSVersionCompatibility = @{
             "5.5.1.2" = @{
                 MinimumPayGlobalVersion = "4.66.0.0"
                 Description = "ESS 5.5.1.2 requires PayGlobal 4.66.0.0 or higher"
@@ -90,13 +96,13 @@ function Initialize-ESSConfiguration {
         }
 
         # Set report settings
-        $script:ESSConfig.ReportSettings = @{
+        $config.ReportSettings = @{
             ReportOutputPath = Get-ReportOutputPath
             ReportNameFormat = "ESS_PreUpgrade_HealthCheck_{0:yyyyMMdd_HHmmss}.html"
         }
 
         # Set API Health Check Settings
-        $script:ESSConfig.APIHealthCheck = @{
+        $config.APIHealthCheck = @{
             DefaultTimeoutSeconds = 90
             MaxRetries = 2
             RetryDelaySeconds = 5
@@ -105,37 +111,71 @@ function Initialize-ESSConfiguration {
         }
 
         # Set Performance and Reliability Settings
-        $script:ESSConfig.Performance = @{
+        $config.Performance = @{
             EnableRetryLogic = $true
             EnableConnectionPooling = $true
             MaxConcurrentRequests = 3
             RequestDelaySeconds = 1
         }
 
-        Write-Verbose "ESS Health Checker configuration initialized successfully."
-        return $script:ESSConfig
+        Write-Verbose "ESS Health Checker configuration created successfully."
+        return $config
     }
     catch {
-        Write-Error "Error initializing ESS Health Checker configuration: $_"
+        Write-Error "Error creating ESS Health Checker configuration: $_"
         throw
     }
+}
+
+function Initialize-ESSConfiguration {
+    <#
+    .SYNOPSIS
+        Creates a new ESS configuration instance (deprecated - use New-ESSConfiguration instead)
+    .DESCRIPTION
+        This function is deprecated. Use New-ESSConfiguration instead for proper dependency injection.
+    .PARAMETER SystemInfo
+        Optional system information to include in configuration
+    .PARAMETER DetectionResults
+        Optional detection results to include in configuration
+    .RETURNS
+        ESSConfiguration instance
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false)]
+        [hashtable]$SystemInfo = $null,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$DetectionResults = $null
+    )
+
+    Write-Warning "Initialize-ESSConfiguration is deprecated. Use New-ESSConfiguration instead."
+    return New-ESSConfiguration -SystemInfo $SystemInfo -DetectionResults $DetectionResults
 }
 
 function Get-ESSConfiguration {
     <#
     .SYNOPSIS
-        Gets the current ESS configuration
+        Gets ESS configuration with dependency injection support
     .DESCRIPTION
-        Returns the singleton ESS configuration instance
+        Returns configuration instance. For proper call stack principles, use New-ESSConfiguration instead.
+    .PARAMETER Configuration
+        Optional configuration instance to use (for testing)
+    .RETURNS
+        ESSConfiguration instance
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [Parameter(Mandatory = $false)]
+        [ESSConfiguration]$Configuration = $null
+    )
     
-    if ($null -eq $script:ESSConfig) {
-        Initialize-ESSConfiguration
+    if ($null -ne $Configuration) {
+        return $Configuration
     }
     
-    return $script:ESSConfig
+    # Create a new configuration instance (no global state)
+    return New-ESSConfiguration
 }
 
 function Update-ESSConfiguration {

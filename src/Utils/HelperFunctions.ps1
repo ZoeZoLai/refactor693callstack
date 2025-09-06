@@ -61,9 +61,16 @@ function Get-AppPoolIdentity {
         [hashtable]$SystemInfo = $null
     )
     
+    Write-Verbose "Get-AppPoolIdentity called with AppPoolName: '$AppPoolName'"
+    
     if ($SystemInfo -and $SystemInfo.IIS -and $SystemInfo.IIS.ApplicationPools) {
+        Write-Verbose "SystemInfo.IIS.ApplicationPools count: $($SystemInfo.IIS.ApplicationPools.Count)"
+        $appPoolNames = $SystemInfo.IIS.ApplicationPools | ForEach-Object { $_.Name }
+        Write-Verbose "Available app pools: $($appPoolNames -join ', ')"
+        
         $appPool = $SystemInfo.IIS.ApplicationPools | Where-Object { $_.Name -eq $AppPoolName }
         if ($appPool) {
+            Write-Verbose "Found app pool: $($appPool.Name)"
             $identityType = $appPool.ProcessModel.IdentityType
             $userName = $appPool.ProcessModel.UserName
             
@@ -72,7 +79,11 @@ function Get-AppPoolIdentity {
             } else {
                 return $identityType
             }
+        } else {
+            Write-Verbose "App pool '$AppPoolName' not found in SystemInfo"
         }
+    } else {
+        Write-Verbose "SystemInfo or IIS.ApplicationPools not available"
     }
     return "Unknown"
 }
