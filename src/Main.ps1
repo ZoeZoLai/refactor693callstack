@@ -20,19 +20,21 @@ Write-Host "Loading ESS Health Checker modules..." -ForegroundColor Yellow
 # Utility modules
 . .\Utils\HelperFunctions.ps1
 
-# System modules (depends on Core modules)
-. .\System\OSInfo.ps1
-. .\System\HardwareInfo.ps1
-. .\System\IISInfo.ps1
-. .\System\SQLInfo.ps1
-. .\System\SystemInfoOrchestrator.ps1
-. .\System\SystemRequirements.ps1
-. .\System\InfrastructureValidation.ps1
-. .\System\ESSValidation.ps1
-. .\System\ValidationOrchestrator.ps1
-. .\System\SystemValidation.ps1
+# System information modules (depends on Core modules)
+. .\SystemInfo\OSInfo.ps1
+. .\SystemInfo\HardwareInfo.ps1
+. .\SystemInfo\IISInfo.ps1
+. .\SystemInfo\SQLInfo.ps1
+. .\SystemInfo\SystemInfoOrchestrator.ps1
 
-# Detection modules (depends on System modules)
+# Validation modules (depends on SystemInfo modules)
+. .\Validation\SystemRequirements.ps1
+. .\Validation\InfrastructureValidation.ps1
+. .\Validation\ESSValidation.ps1
+. .\Validation\ValidationOrchestrator.ps1
+. .\Validation\SystemValidation.ps1
+
+# Detection modules (depends on SystemInfo modules)
 . .\Detection\ESSDetection.ps1
 . .\Detection\WFEDetection.ps1
 . .\Detection\DetectionOrchestrator.ps1

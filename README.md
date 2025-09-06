@@ -15,7 +15,17 @@ The ESS Pre-Upgrade Health Checker is designed to validate system readiness for 
 
 ## 🏗️ Architecture
 
-The project follows **Call Stack Principles** with clean dependency injection and single responsibility design:
+The project follows **Call Stack Principles** with clean dependency injection, single responsibility design, and clear separation of concerns:
+
+### 🎯 **Architecture Overview**
+
+The health checker follows a **3-phase approach**:
+
+1. **🔍 Discovery Phase** (`Detection/`): Finds ESS/WFE installations and API endpoints
+2. **📊 Information Phase** (`SystemInfo/`): Collects detailed system information  
+3. **✅ Validation Phase** (`Validation/`): Validates discovered components against requirements
+
+This separation ensures each phase can be tested independently and makes the codebase highly maintainable.
 
 ```
 src/
@@ -23,17 +33,18 @@ src/
 │   ├── Config.ps1          # Configuration management
 │   ├── HealthCheckCore.ps1 # Result management & core utilities
 │   └── ReportGenerator.ps1 # HTML report generation
-├── Detection/              # ESS/WFE detection modules
+├── Detection/              # Discovery modules
 │   ├── ESSDetection.ps1    # ESS installation detection
 │   ├── WFEDetection.ps1    # WFE installation detection
 │   ├── ESSHealthCheckAPI.ps1 # API health check functions
 │   └── DetectionOrchestrator.ps1 # Detection coordination
-├── System/                 # System information & validation
-│   ├── SystemInfoOrchestrator.ps1 # System info collection
+├── SystemInfo/             # System information collection
 │   ├── OSInfo.ps1          # Operating system information
 │   ├── HardwareInfo.ps1    # Hardware & network information
 │   ├── IISInfo.ps1         # IIS configuration
 │   ├── SQLInfo.ps1         # SQL Server information
+│   └── SystemInfoOrchestrator.ps1 # System info collection coordination
+├── Validation/             # Validation modules
 │   ├── SystemRequirements.ps1 # System requirement validation
 │   ├── InfrastructureValidation.ps1 # Infrastructure validation
 │   ├── ESSValidation.ps1   # ESS-specific validation
@@ -165,27 +176,37 @@ The project includes comprehensive test files:
 
 ## 🏛️ Call Stack Principles
 
-This project follows strict call stack principles:
+This project follows strict call stack principles with a clean, modular architecture:
+
+### ✅ Separation of Concerns
+- **Detection/**: Discovers what ESS/WFE installations exist
+- **SystemInfo/**: Collects detailed system information
+- **Validation/**: Validates discovered components against requirements
+- **Core/**: Provides foundation services and utilities
 
 ### ✅ Dependency Injection
 - Functions receive data through explicit parameters
 - No global state dependencies
 - Clear input/output contracts
+- Each module can be tested independently
 
 ### ✅ Single Responsibility
-- Each module has one clear purpose
+- Each folder has one clear purpose
+- Each module focuses on a specific domain
 - Functions are focused and do one thing well
-- Clear separation of concerns
+- Clear separation between discovery and validation
 
 ### ✅ Testability
 - Functions can be tested in isolation
 - Mock data support for all functions
 - No hidden dependencies
+- Individual modules can be tested without full system
 
 ### ✅ Maintainability
 - Clear data flow through function parameters
 - Easy to understand and modify
 - Consistent patterns throughout
+- Logical grouping of related functionality
 
 ## 📝 Example Output
 
@@ -279,6 +300,13 @@ For issues or questions:
 
 ---
 
-**Version**: 2.0 - Call Stack Principles  
+**Version**: 2.1 - Clean Architecture with Separation of Concerns  
 **Last Updated**: September 2025  
 **Author**: Zoe Lai
+
+### 🎉 **Recent Improvements (v2.1)**
+- **✅ Restructured Architecture**: Separated discovery, information collection, and validation into distinct folders
+- **✅ Improved Maintainability**: Clear separation of concerns with single responsibility per folder
+- **✅ Enhanced Testability**: Each phase can be tested independently
+- **✅ Better Organization**: Logical grouping of related functionality
+- **✅ No Breaking Changes**: All existing functionality preserved

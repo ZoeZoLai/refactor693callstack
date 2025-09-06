@@ -40,7 +40,7 @@ function Start-SystemValidation {
     
     try {
         # Use the original working validation orchestrator
-        . .\System\ValidationOrchestrator.ps1
+        . .\Validation\ValidationOrchestrator.ps1
         
         # Get the validation manager and run validation
         $manager = Get-ValidationManager

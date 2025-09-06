@@ -13,12 +13,12 @@ try {
     . .\..\Core\HealthCheckCore.ps1
     . .\..\Core\ReportGenerator.ps1
     
-    # Load System modules
-    . .\..\System\OSInfo.ps1
-    . .\..\System\HardwareInfo.ps1
-    . .\..\System\IISInfo.ps1
-    . .\..\System\SQLInfo.ps1
-    . .\..\System\SystemInfoOrchestrator.ps1
+    # Load SystemInfo modules
+    . .\..\SystemInfo\OSInfo.ps1
+    . .\..\SystemInfo\HardwareInfo.ps1
+    . .\..\SystemInfo\IISInfo.ps1
+    . .\..\SystemInfo\SQLInfo.ps1
+    . .\..\SystemInfo\SystemInfoOrchestrator.ps1
     
     # Load Utils
     . .\..\Utils\HelperFunctions.ps1
@@ -48,9 +48,9 @@ try {
 }
 
 # Test result manager creation
-Write-Host "  Testing New-HealthCheckResultManager..." -ForegroundColor Cyan
+Write-Host "  Testing Get-HealthCheckManager..." -ForegroundColor Cyan
 try {
-    $resultManager = New-HealthCheckResultManager
+    $resultManager = Get-HealthCheckManager
     if ($resultManager) {
         Write-Host "  [PASS] Result manager created successfully" -ForegroundColor Green
         Write-Host "    - Initial result count: $($resultManager.GetResults().Count)" -ForegroundColor Gray
