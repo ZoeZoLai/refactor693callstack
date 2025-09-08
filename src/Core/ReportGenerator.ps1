@@ -21,6 +21,8 @@ function New-HealthCheckReport {
         System information hashtable
     .PARAMETER DetectionResults
         Detection results hashtable
+    .PARAMETER Manager
+        HealthCheckResultManager instance for result management
     .PARAMETER OutputPath
         Optional output path for the report
     .RETURNS
@@ -36,6 +38,9 @@ function New-HealthCheckReport {
         
         [Parameter(Mandatory = $false)]
         [hashtable]$DetectionResults = $null,
+        
+        [Parameter(Mandatory = $true)]
+        [object]$Manager,
         
         [Parameter(Mandatory = $false)]
         [string]$OutputPath = $null
@@ -107,7 +112,7 @@ function New-ReportHTML {
 
     
     # Calculate summary statistics
-    $summary = Get-HealthCheckSummary
+    $summary = Get-HealthCheckSummary -Manager $Manager
     $totalChecks = $summary.Total
     $passChecks = $summary.Pass
     $failChecks = $summary.Fail

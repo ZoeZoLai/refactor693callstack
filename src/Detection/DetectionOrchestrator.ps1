@@ -10,6 +10,12 @@
     Version: 2.0
 #>
 
+# Note: No imports needed - manager instances are passed as parameters
+# This follows pure dependency injection principles
+
+# Note: Using [object] type for Manager parameter to avoid linter errors
+# The actual type is HealthCheckResultManager, but PowerShell linter can't resolve it
+
 class DetectionManager {
     [hashtable]$DetectionResults
     [hashtable]$SystemInfo
@@ -19,7 +25,7 @@ class DetectionManager {
         $this.SystemInfo = @{}
     }
     
-    [hashtable]DetectESSWFEDeployment([hashtable]$SystemInfo = $null) {
+    [hashtable]DetectESSWFEDeployment([hashtable]$SystemInfo = $null, [object]$Manager = $null) {
         Write-Host "Running ESS/WFE detection..." -ForegroundColor Yellow
         Write-Host "SystemInfo parameter: $($null -ne $SystemInfo)" -ForegroundColor Yellow
         if ($SystemInfo) {
@@ -129,25 +135,8 @@ class DetectionManager {
     }
 }
 
-# Global detection manager instance
-$script:DetectionManager = $null
-
-function Get-DetectionManager {
-    <#
-    .SYNOPSIS
-        Gets the detection manager instance
-    .DESCRIPTION
-        Returns the singleton detection manager instance
-    #>
-    [CmdletBinding()]
-    param()
-    
-    if ($null -eq $script:DetectionManager) {
-        $script:DetectionManager = [DetectionManager]::new()
-    }
-    
-    return $script:DetectionManager
-}
+# DetectionManager class is now instantiated and passed through the call stack
+# No global variables needed - following call stack principles
 
 function Get-ESSWFEDetection {
     <#
@@ -162,17 +151,26 @@ function Get-ESSWFEDetection {
         5. List all instances found
     .PARAMETER SystemInfo
         Optional system information object for enhanced detection
+    .PARAMETER Manager
+        HealthCheckResultManager instance for result management
+    .PARAMETER DetectionManager
+        DetectionManager instance for detection operations
     .RETURNS
         PSCustomObject containing ESS/WFE detection results
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
-        [hashtable]$SystemInfo = $null
+        [hashtable]$SystemInfo = $null,
+        
+        [Parameter(Mandatory = $true)]
+        [object]$Manager,
+        
+        [Parameter(Mandatory = $true)]
+        [object]$DetectionManager
     )
     
-    $manager = Get-DetectionManager
-    return $manager.DetectESSWFEDeployment($SystemInfo)
+    return $DetectionManager.DetectESSWFEDeployment($SystemInfo, $Manager)
 }
 
 function Test-IISInstallation {
@@ -222,5 +220,5 @@ function Test-IISInstallation {
     }
 }
 
-# Initialize the detection manager when the module is loaded
-$script:DetectionManager = [DetectionManager]::new() 
+# DetectionManager instances are now created and passed through the call stack
+# No global initialization needed 

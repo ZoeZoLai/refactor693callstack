@@ -28,8 +28,6 @@ class ESSConfiguration {
     }
 }
 
-# Note: Global configuration removed to follow call stack principles
-# Use New-ESSConfiguration() and dependency injection instead
 
 function New-ESSConfiguration {
     <#
@@ -120,31 +118,6 @@ function New-ESSConfiguration {
     }
 }
 
-function Initialize-ESSConfiguration {
-    <#
-    .SYNOPSIS
-        Creates a new ESS configuration instance (deprecated - use New-ESSConfiguration instead)
-    .DESCRIPTION
-        This function is deprecated. Use New-ESSConfiguration instead for proper dependency injection.
-    .PARAMETER SystemInfo
-        Optional system information to include in configuration
-    .PARAMETER DetectionResults
-        Optional detection results to include in configuration
-    .RETURNS
-        ESSConfiguration instance
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $false)]
-        [hashtable]$SystemInfo = $null,
-        
-        [Parameter(Mandatory = $false)]
-        [hashtable]$DetectionResults = $null
-    )
-
-    Write-Warning "Initialize-ESSConfiguration is deprecated. Use New-ESSConfiguration instead."
-    return New-ESSConfiguration -SystemInfo $SystemInfo -DetectionResults $DetectionResults
-}
 
 function Get-ESSConfiguration {
     <#
@@ -171,34 +144,6 @@ function Get-ESSConfiguration {
     return New-ESSConfiguration
 }
 
-function Update-ESSConfiguration {
-    <#
-    .SYNOPSIS
-        Updates the ESS configuration with new data
-    .DESCRIPTION
-        Updates specific parts of the configuration with new information
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $false)]
-        [hashtable]$SystemInfo = $null,
-        
-        [Parameter(Mandatory = $false)]
-        [hashtable]$DetectionResults = $null
-    )
-    
-    $config = Get-ESSConfiguration
-    
-    if ($SystemInfo) {
-        $config.SystemInfo = $SystemInfo
-    }
-    
-    if ($DetectionResults) {
-        $config.DetectionResults = $DetectionResults
-    }
-    
-    Write-Verbose "ESS configuration updated"
-}
 
 
 function Get-MinimumDiskSpace {
@@ -237,6 +182,4 @@ function Get-MinimumProcessorSpeed {
     return 2.0  # MYOB PayGlobal ESS recommended minimum processor speed (GHz)
 }
 
-# Initialize configuration when module is loaded
-Initialize-ESSConfiguration
 

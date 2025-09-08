@@ -103,25 +103,6 @@ class SystemInformationManager {
     }
 }
 
-# Global system information manager instance
-$script:SystemInfoManager = $null
-
-function Get-SystemInformationManager {
-    <#
-    .SYNOPSIS
-        Gets the system information manager instance
-    .DESCRIPTION
-        Returns the singleton system information manager instance
-    #>
-    [CmdletBinding()]
-    param()
-    
-    if ($null -eq $script:SystemInfoManager) {
-        $script:SystemInfoManager = [SystemInformationManager]::new()
-    }
-    
-    return $script:SystemInfoManager
-}
 
 function Get-SystemInformation {
     <#
@@ -130,76 +111,19 @@ function Get-SystemInformation {
     .DESCRIPTION
         Collects detailed system information including OS version, hardware, IIS, database connections,
         and more for use in configuration and health checks
+    .PARAMETER SystemInfoManager
+        SystemInformationManager instance for system information operations
     .RETURNS
         PSCustomObject containing system information
     #>
     [CmdletBinding()]
-    param()
-    
-    $manager = Get-SystemInformationManager
-    return $manager.CollectSystemInformation()
-}
-
-function Get-SystemInfoValue {
-    <#
-    .SYNOPSIS
-        Get a specific value from the system information
-    .PARAMETER Path
-        Dot notation path to the value (e.g., "OS.Version", "Hardware.TotalPhysicalMemory")
-    .PARAMETER SystemInfo
-        Optional system information object. If not provided, uses the manager's cached data
-    #>
-    [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Path,
-        
-        [Parameter(Mandatory = $false)]
-        [hashtable]$SystemInfo = $null
+        [object]$SystemInfoManager
     )
     
-    if ($SystemInfo) {
-        # Use provided system info
-        try {
-            $value = $SystemInfo
-            $pathParts = $Path.Split('.')
-            
-            foreach ($part in $pathParts) {
-                $value = $value.$part
-                if ($null -eq $value) {
-                    Write-Warning "Value not found for path '$Path'."
-                    return $null
-                }
-            }
-            return $value
-        }
-        catch {
-            Write-Warning "Could not retrieve system info value for path '$Path': $_"
-            return $null
-        }
-    } else {
-        # Use manager's cached data
-        $manager = Get-SystemInformationManager
-        return $manager.GetSystemInfoValue($Path)
-    }
+    return $SystemInfoManager.CollectSystemInformation()
 }
 
-function Update-SystemDeploymentInformation {
-    <#
-    .SYNOPSIS
-        Updates system information with deployment detection results
-    .PARAMETER DetectionResults
-        Detection results from ESS/WFE detection
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [hashtable]$DetectionResults
-    )
-    
-    $manager = Get-SystemInformationManager
-    $manager.UpdateDeploymentInformation($DetectionResults)
-}
 
-# Initialize the system information manager when the module is loaded
-$script:SystemInfoManager = [SystemInformationManager]::new() 
+

@@ -19,45 +19,50 @@ function Test-ESSWFEDetection {
         with injected detection results
     .PARAMETER DetectionResults
         Detection results containing ESS and WFE instances
+    .PARAMETER Manager
+        HealthCheckResultManager instance for result management
     .RETURNS
         Array of validation results
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [hashtable]$DetectionResults
+        [hashtable]$DetectionResults,
+        
+        [Parameter(Mandatory = $true)]
+        [object]$Manager
     )
 
     try {
         Write-Host "Starting ESS/WFE detection validation..." -ForegroundColor Yellow
         
         if (-not $DetectionResults) {
-            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "Detection Results" -Status "FAIL" -Message "No detection results available"
+            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "Detection Results" -Status "FAIL" -Message "No detection results available" -Manager $Manager
             return
         }
         
         # Add ESS installation checks
         if ($DetectionResults.ESSInstances.Count -gt 0) {
-            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "ESS Installation" -Status "PASS" -Message "Found $($DetectionResults.ESSInstances.Count) ESS installation(s)"
+            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "ESS Installation" -Status "PASS" -Message "Found $($DetectionResults.ESSInstances.Count) ESS installation(s)" -Manager $Manager
         } else {
-            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "ESS Installation" -Status "INFO" -Message "No ESS installations found on this machine"
+            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "ESS Installation" -Status "INFO" -Message "No ESS installations found on this machine" -Manager $Manager
         }
         
         # Add WFE installation checks
         if ($DetectionResults.WFEInstances.Count -gt 0) {
-            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "WFE Installation" -Status "PASS" -Message "Found $($DetectionResults.WFEInstances.Count) WFE installation(s)"
+            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "WFE Installation" -Status "PASS" -Message "Found $($DetectionResults.WFEInstances.Count) WFE installation(s)" -Manager $Manager
         } else {
-            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "WFE Installation" -Status "INFO" -Message "No WFE installations found on this machine"
+            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "WFE Installation" -Status "INFO" -Message "No WFE installations found on this machine" -Manager $Manager
         }
         
         # Add deployment type check
-        Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "Deployment Type" -Status "INFO" -Message "Deployment Type: $($DetectionResults.DeploymentType)"
+        Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "Deployment Type" -Status "INFO" -Message "Deployment Type: $($DetectionResults.DeploymentType)" -Manager $Manager
         
         Write-Host "ESS/WFE detection validation completed." -ForegroundColor Green
     }
     catch {
         Write-Error "Error during ESS/WFE detection validation: $_"
-        Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "Detection Process" -Status "FAIL" -Message "Error during detection: $($_.Exception.Message)"
+        Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "Detection Process" -Status "FAIL" -Message "Error during detection: $($_.Exception.Message)" -Manager $Manager
     }
 }
 
@@ -71,17 +76,22 @@ function Test-WebConfigEncryptionValidation {
         Uses injected detection results.
     .PARAMETER DetectionResults
         Detection results containing ESS instances
+    .PARAMETER Manager
+        HealthCheckResultManager instance for result management
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [hashtable]$DetectionResults
+        [hashtable]$DetectionResults,
+        
+        [Parameter(Mandatory = $true)]
+        [object]$Manager
     )
 
     Write-Verbose "Testing web.config encryption validation..."
     
     if (-not $DetectionResults -or -not $DetectionResults.ESSInstances) {
-        Add-HealthCheckResult -Category "Web.Config Encryption" -Check "ESS Detection" -Status "WARNING" -Message "No ESS instances detected for encryption validation"
+        Add-HealthCheckResult -Category "Web.Config Encryption" -Check "ESS Detection" -Status "WARNING" -Message "No ESS instances detected for encryption validation" -Manager $Manager
         return
     }
     
@@ -96,16 +106,16 @@ function Test-WebConfigEncryptionValidation {
         
         if ($authMode -eq "SingleSignOn") {
             if ($isEncrypted) {
-                Add-HealthCheckResult -Category "Web.Config Encryption" -Check "SingleSignOn Encryption" -Status "FAIL" -Message "ESS site '$siteIdentifier' uses SingleSignOn authentication and web.config is encrypted. Ensure decrypt first before upgrade."
+                Add-HealthCheckResult -Category "Web.Config Encryption" -Check "SingleSignOn Encryption" -Status "FAIL" -Message "ESS site '$siteIdentifier' uses SingleSignOn authentication and web.config is encrypted. Ensure decrypt first before upgrade." -Manager $Manager
             } else {
-                Add-HealthCheckResult -Category "Web.Config Encryption" -Check "SingleSignOn Encryption" -Status "PASS" -Message "ESS site '$siteIdentifier' uses SingleSignOn authentication and web.config is not encrypted - ready for upgrade"
+                Add-HealthCheckResult -Category "Web.Config Encryption" -Check "SingleSignOn Encryption" -Status "PASS" -Message "ESS site '$siteIdentifier' uses SingleSignOn authentication and web.config is not encrypted - ready for upgrade" -Manager $Manager
             }
         } else {
             # For non-SingleSignOn authentication modes, encryption should be false
             if ($isEncrypted) {
-                Add-HealthCheckResult -Category "Web.Config Encryption" -Check "Authentication Encryption" -Status "INFO" -Message "ESS site '$siteIdentifier' uses $authMode authentication and web.config is encrypted"
+                Add-HealthCheckResult -Category "Web.Config Encryption" -Check "Authentication Encryption" -Status "INFO" -Message "ESS site '$siteIdentifier' uses $authMode authentication and web.config is encrypted" -Manager $Manager
             } else {
-                Add-HealthCheckResult -Category "Web.Config Encryption" -Check "Authentication Encryption" -Status "PASS" -Message "ESS site '$siteIdentifier' uses $authMode authentication and web.config is not encrypted"
+                Add-HealthCheckResult -Category "Web.Config Encryption" -Check "Authentication Encryption" -Status "PASS" -Message "ESS site '$siteIdentifier' uses $authMode authentication and web.config is not encrypted" -Manager $Manager
             }
         }
     }
@@ -120,6 +130,8 @@ function Test-ESSVersionValidation {
         using injected detection results and configuration
     .PARAMETER DetectionResults
         Detection results containing ESS instances
+    .PARAMETER Manager
+        HealthCheckResultManager instance for result management
     .PARAMETER Configuration
         Optional configuration object containing version requirements
     #>
@@ -128,6 +140,9 @@ function Test-ESSVersionValidation {
         [Parameter(Mandatory = $true)]
         [hashtable]$DetectionResults,
         
+        [Parameter(Mandatory = $true)]
+        [object]$Manager,
+        
         [Parameter(Mandatory = $false)]
         [hashtable]$Configuration = $null
     )
@@ -135,7 +150,7 @@ function Test-ESSVersionValidation {
     Write-Verbose "Testing ESS version validation..."
     
     if (-not $DetectionResults -or -not $DetectionResults.ESSInstances) {
-        Add-HealthCheckResult -Category "ESS Version Validation" -Check "ESS Detection" -Status "WARNING" -Message "No ESS instances detected for version validation"
+        Add-HealthCheckResult -Category "ESS Version Validation" -Check "ESS Detection" -Status "WARNING" -Message "No ESS instances detected for version validation" -Manager $Manager
         return
     }
     
@@ -152,31 +167,31 @@ function Test-ESSVersionValidation {
         # Check ESS version
         if ($essVersion) {
             if ($compatibility.ESSVersionSupported) {
-                Add-HealthCheckResult -Category "ESS Version Validation" -Check "ESS Version" -Status "PASS" -Message "ESS site '$siteIdentifier' version $essVersion is supported"
+                Add-HealthCheckResult -Category "ESS Version Validation" -Check "ESS Version" -Status "PASS" -Message "ESS site '$siteIdentifier' version $essVersion is supported" -Manager $Manager
             } else {
-                Add-HealthCheckResult -Category "ESS Version Validation" -Check "ESS Version" -Status "FAIL" -Message "ESS site '$siteIdentifier' version $essVersion is not supported. Minimum required version is 5.4.7.2"
+                Add-HealthCheckResult -Category "ESS Version Validation" -Check "ESS Version" -Status "FAIL" -Message "ESS site '$siteIdentifier' version $essVersion is not supported. Minimum required version is 5.4.7.2" -Manager $Manager
             }
         } else {
-            Add-HealthCheckResult -Category "ESS Version Validation" -Check "ESS Version" -Status "WARNING" -Message "ESS site '$siteIdentifier' version could not be determined"
+            Add-HealthCheckResult -Category "ESS Version Validation" -Check "ESS Version" -Status "WARNING" -Message "ESS site '$siteIdentifier' version could not be determined" -Manager $Manager
         }
         
         # Check PayGlobal version compatibility
         if ($payglobalVersion) {
             if ($compatibility.PayGlobalVersionCompatible) {
-                Add-HealthCheckResult -Category "ESS Version Validation" -Check "PayGlobal Version" -Status "PASS" -Message "ESS site '$siteIdentifier' PayGlobal version $payglobalVersion is compatible with ESS version $essVersion"
+                Add-HealthCheckResult -Category "ESS Version Validation" -Check "PayGlobal Version" -Status "PASS" -Message "ESS site '$siteIdentifier' PayGlobal version $payglobalVersion is compatible with ESS version $essVersion" -Manager $Manager
             } else {
-                Add-HealthCheckResult -Category "ESS Version Validation" -Check "PayGlobal Version" -Status "FAIL" -Message "ESS site '$siteIdentifier' PayGlobal version $payglobalVersion is not compatible with ESS version $essVersion"
+                Add-HealthCheckResult -Category "ESS Version Validation" -Check "PayGlobal Version" -Status "FAIL" -Message "ESS site '$siteIdentifier' PayGlobal version $payglobalVersion is not compatible with ESS version $essVersion" -Manager $Manager
             }
         } else {
-            Add-HealthCheckResult -Category "ESS Version Validation" -Check "PayGlobal Version" -Status "INFO" -Message "ESS site '$siteIdentifier' PayGlobal version could not be determined"
+            Add-HealthCheckResult -Category "ESS Version Validation" -Check "PayGlobal Version" -Status "INFO" -Message "ESS site '$siteIdentifier' PayGlobal version could not be determined" -Manager $Manager
         }
         
         # Check overall compatibility
         if ($compatibility.OverallCompatibility) {
-            Add-HealthCheckResult -Category "ESS Version Validation" -Check "Overall Compatibility" -Status "PASS" -Message "ESS site '$siteIdentifier' versions are compatible for upgrade"
+            Add-HealthCheckResult -Category "ESS Version Validation" -Check "Overall Compatibility" -Status "PASS" -Message "ESS site '$siteIdentifier' versions are compatible for upgrade" -Manager $Manager
         } else {
             $recommendations = $compatibility.Recommendations -join "; "
-            Add-HealthCheckResult -Category "ESS Version Validation" -Check "Overall Compatibility" -Status "FAIL" -Message "ESS site '$siteIdentifier' versions are not compatible for upgrade. Recommendations: $recommendations"
+            Add-HealthCheckResult -Category "ESS Version Validation" -Check "Overall Compatibility" -Status "FAIL" -Message "ESS site '$siteIdentifier' versions are not compatible for upgrade. Recommendations: $recommendations" -Manager $Manager
         }
     }
 } 
@@ -190,17 +205,22 @@ function Test-ESSHTTPSValidation {
         using injected detection results
     .PARAMETER DetectionResults
         Detection results containing ESS instances
+    .PARAMETER Manager
+        HealthCheckResultManager instance for result management
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [hashtable]$DetectionResults
+        [hashtable]$DetectionResults,
+        
+        [Parameter(Mandatory = $true)]
+        [object]$Manager
     )
 
     Write-Verbose "Testing ESS HTTPS validation..."
     
     if (-not $DetectionResults -or -not $DetectionResults.ESSInstances) {
-        Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "ESS Detection" -Status "WARNING" -Message "No ESS instances detected for HTTPS validation"
+        Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "ESS Detection" -Status "WARNING" -Message "No ESS instances detected for HTTPS validation" -Manager $Manager
         return
     }
     
@@ -215,28 +235,28 @@ function Test-ESSHTTPSValidation {
         
         # Check if HTTPS is used
         if ($bindingsInfo.UsesHTTPS) {
-            Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "HTTPS Usage" -Status "PASS" -Message "ESS site '$siteIdentifier' uses HTTPS protocol"
+            Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "HTTPS Usage" -Status "PASS" -Message "ESS site '$siteIdentifier' uses HTTPS protocol" -Manager $Manager
             
             # Check SSL certificate expiry
             if ($sslInfo -and $sslInfo.Count -gt 0) {
                 foreach ($ssl in $sslInfo) {
                     if ($ssl.HasValidCertificate) {
                         if ($ssl.Status -eq "VALID") {
-                            Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "SSL Certificate" -Status "PASS" -Message "ESS site '$siteIdentifier' SSL certificate is valid (expires in $($ssl.DaysUntilExpiry) days)"
+                            Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "SSL Certificate" -Status "PASS" -Message "ESS site '$siteIdentifier' SSL certificate is valid (expires in $($ssl.DaysUntilExpiry) days)" -Manager $Manager
                         } elseif ($ssl.Status -eq "WARNING") {
-                            Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "SSL Certificate" -Status "WARNING" -Message "ESS site '$siteIdentifier' SSL certificate expires soon (expires in $($ssl.DaysUntilExpiry) days)"
+                            Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "SSL Certificate" -Status "WARNING" -Message "ESS site '$siteIdentifier' SSL certificate expires soon (expires in $($ssl.DaysUntilExpiry) days)" -Manager $Manager
                         } elseif ($ssl.Status -eq "EXPIRED") {
-                            Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "SSL Certificate" -Status "FAIL" -Message "ESS site '$siteIdentifier' SSL certificate has expired ($($ssl.DaysUntilExpiry) days ago)"
+                            Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "SSL Certificate" -Status "FAIL" -Message "ESS site '$siteIdentifier' SSL certificate has expired ($($ssl.DaysUntilExpiry) days ago)" -Manager $Manager
                         }
                     } else {
-                        Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "SSL Certificate" -Status "FAIL" -Message "ESS site '$siteIdentifier' SSL certificate is invalid or not found: $($ssl.Error)"
+                        Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "SSL Certificate" -Status "FAIL" -Message "ESS site '$siteIdentifier' SSL certificate is invalid or not found: $($ssl.Error)" -Manager $Manager
                     }
                 }
             } else {
-                Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "SSL Certificate" -Status "WARNING" -Message "ESS site '$siteIdentifier' uses HTTPS but SSL certificate information could not be retrieved"
+                Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "SSL Certificate" -Status "WARNING" -Message "ESS site '$siteIdentifier' uses HTTPS but SSL certificate information could not be retrieved" -Manager $Manager
             }
         } else {
-            Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "HTTPS Usage" -Status "INFO" -Message "ESS site '$siteIdentifier' uses HTTP protocol (not HTTPS)"
+            Add-HealthCheckResult -Category "ESS HTTPS Validation" -Check "HTTPS Usage" -Status "INFO" -Message "ESS site '$siteIdentifier' uses HTTP protocol (not HTTPS)" -Manager $Manager
         }
     }
 }

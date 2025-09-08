@@ -32,7 +32,6 @@ Write-Host "Loading ESS Health Checker modules..." -ForegroundColor Yellow
 . .\Validation\InfrastructureValidation.ps1
 . .\Validation\ESSValidation.ps1
 . .\Validation\ValidationOrchestrator.ps1
-. .\Validation\SystemValidation.ps1
 
 # Detection modules (depends on SystemInfo modules)
 . .\Detection\ESSDetection.ps1
@@ -59,22 +58,29 @@ function Start-ESSHealthChecks {
     try {
         Write-Host "Starting ESS Pre-Upgrade Health Checks..." -ForegroundColor Cyan
         
+        # Create all manager instances at the top level - no global variables needed
+        # Use explicit object creation to avoid type resolution issues
+        $healthCheckManager = New-Object -TypeName HealthCheckResultManager
+        $detectionManager = New-Object -TypeName DetectionManager
+        $validationManager = New-Object -TypeName ValidationManager
+        $systemInfoManager = New-Object -TypeName SystemInformationManager
+        
         # Step 1: Collect system information
         Write-Host "Step 1: Collecting system information..." -ForegroundColor Yellow
-        $systemInfo = Get-SystemInformation
+        $systemInfo = Get-SystemInformation -SystemInfoManager $systemInfoManager
         
         # Step 2: Detect ESS/WFE installations
         Write-Host "Step 2: Detecting ESS/WFE installations..." -ForegroundColor Yellow
-        $detectionResults = Get-ESSWFEDetection -SystemInfo $systemInfo
+        $detectionResults = Get-ESSWFEDetection -SystemInfo $systemInfo -Manager $healthCheckManager -DetectionManager $detectionManager
         
         # Step 3: Run validation checks
         Write-Host "Step 3: Running validation checks..." -ForegroundColor Yellow
-        Start-SystemValidation -SystemInfo $systemInfo -DetectionResults $detectionResults
+        Start-SystemValidation -SystemInfo $systemInfo -DetectionResults $detectionResults -Manager $healthCheckManager -ValidationManager $validationManager
         
         # Step 4: Generate report
         Write-Host "Step 4: Generating health check report..." -ForegroundColor Yellow
-        $results = Get-HealthCheckResults
-        $reportPath = New-HealthCheckReport -Results $results -SystemInfo $systemInfo -DetectionResults $detectionResults
+        $results = Get-HealthCheckResults -Manager $healthCheckManager
+        $reportPath = New-HealthCheckReport -Results $results -SystemInfo $systemInfo -DetectionResults $detectionResults -Manager $healthCheckManager
         
         # Step 5: Display summary
         Write-Host "`n=== Health Check Summary ===" -ForegroundColor Magenta
@@ -88,7 +94,7 @@ function Start-ESSHealthChecks {
         Write-Host "  WFE Instances: $($detectionResults.WFEInstances.Count)" -ForegroundColor White
         Write-Host "  Deployment Type: $($detectionResults.DeploymentType)" -ForegroundColor White
         
-        $summary = Get-HealthCheckSummary
+        $summary = Get-HealthCheckSummary -Manager $healthCheckManager
         Write-Host "Health Check Results:" -ForegroundColor White
         Write-Host "  Total Checks: $($summary.Total)" -ForegroundColor White
         Write-Host "  Passed: $($summary.Pass)" -ForegroundColor Green

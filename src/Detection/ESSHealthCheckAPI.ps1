@@ -499,198 +499,6 @@ function Get-ComponentInfo {
     }
 }
 
-function Test-ESSHealthCheckEndpoint {
-    <#
-    .SYNOPSIS
-        Test if the ESS health check endpoint is accessible and working (simplified for localhost)
-    .DESCRIPTION
-        Tests the health check endpoint to verify it's accessible and returns valid responses.
-        Simplified for localhost calls and focused on the specific ESS components.
-    .PARAMETER SiteName
-        The IIS site name to test
-    .PARAMETER ApplicationPath
-        The application path to test
-    .PARAMETER Protocol
-        The protocol to test (http or https, defaults to http for localhost)
-    .PARAMETER Port
-        The port number to test
-    .EXAMPLE
-        Test-ESSHealthCheckEndpoint -SiteName "Default Web Site" -ApplicationPath "/Self-Service/NZ_ESS"
-    .RETURNS
-        PSCustomObject containing test results
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$SiteName,
-        
-        [Parameter(Mandatory = $true)]
-        [string]$ApplicationPath,
-        
-        [Parameter(Mandatory = $false)]
-        [ValidateSet("http", "https")]
-        [string]$Protocol = "http",
-        
-        [Parameter(Mandatory = $false)]
-        [int]$Port,
-        
-        [Parameter(Mandatory = $false)]
-        [int]$TimeoutSeconds = 30
-    )
-    
-    try {
-        Write-Host "Testing ESS health check endpoint accessibility..." -ForegroundColor Yellow
-        
-        $testResults = @{
-            SiteName = $SiteName
-            ApplicationPath = $ApplicationPath
-            Protocol = $Protocol
-            Port = $Port
-            HostName = "localhost"
-            EndpointAccessible = $false
-            HealthCheckWorking = $false
-            Uri = $null
-            TestResults = @()
-            Recommendations = @()
-            ComponentStatus = @{}
-        }
-        
-        # Test 1: Basic connectivity
-        Write-Host "Test 1: Testing basic connectivity..." -ForegroundColor Cyan
-        
-        $uriBuilder = @{
-            Scheme = $Protocol
-            Host = "localhost"
-            Port = if ($Port) { $Port } else { if ($Protocol -eq "https") { 443 } else { 80 } }
-            Application = $ApplicationPath.TrimStart('/')
-            Endpoint = "api/v1/healthcheck"
-        }
-        
-        $portString = if ($uriBuilder.Port -ne 80 -and $uriBuilder.Port -ne 443) { ":$($uriBuilder.Port)" } else { "" }
-        $fullUri = "$($uriBuilder.Scheme)://$($uriBuilder.Host)$portString/$($uriBuilder.Application)/$($uriBuilder.Endpoint)"
-        $testResults.Uri = $fullUri
-        
-        Write-Host "Testing URI: $fullUri" -ForegroundColor Gray
-        
-        # Test basic HTTP connectivity
-        try {
-            $request = [System.Net.WebRequest]::Create($fullUri)
-            $request.Method = "GET"
-            $request.Timeout = ($TimeoutSeconds * 1000)  # Convert seconds to milliseconds for WebRequest
-            $request.Accept = "application/json, application/xml, text/xml"
-            
-            $response = $request.GetResponse()
-            $response.Close()
-            $testResults.EndpointAccessible = $true
-            $testResults.TestResults += @{
-                Test = "Basic Connectivity"
-                Status = "PASS"
-                Message = "Endpoint is accessible"
-                Details = "HTTP Status: $($response.StatusCode)"
-            }
-            Write-Host "PASS - Basic connectivity test passed" -ForegroundColor Green
-        }
-        catch {
-            $testResults.TestResults += @{
-                Test = "Basic Connectivity"
-                Status = "FAIL"
-                Message = "Endpoint is not accessible"
-                Details = "Error: $($_.Exception.Message)"
-            }
-            Write-Host "FAIL - Basic connectivity test failed: $($_.Exception.Message)" -ForegroundColor Red
-            $testResults.Recommendations += "Check if the site is running and accessible"
-            $testResults.Recommendations += "Verify the application path is correct"
-            $testResults.Recommendations += "Check IIS application pool status"
-            return [PSCustomObject]$testResults
-        }
-        
-        # Test 2: Health check API functionality
-        Write-Host "Test 2: Testing health check API functionality..." -ForegroundColor Cyan
-        
-        try {
-            $healthCheckResult = Get-ESSHealthCheckViaAPI -SiteName $SiteName -ApplicationPath $ApplicationPath -Protocol $Protocol -Port $Port -TimeoutSeconds $TimeoutSeconds
-            
-            if ($null -ne $healthCheckResult.Success) {
-                $testResults.HealthCheckWorking = $true
-                $testResults.TestResults += @{
-                    Test = "Health Check API"
-                    Status = "PASS"
-                    Message = "Health check API is working"
-                    Details = "Overall Status: $($healthCheckResult.OverallStatus), Components: $($healthCheckResult.Summary.TotalComponents)"
-                }
-                Write-Host "PASS - Health check API test passed" -ForegroundColor Green
-                
-                # Extract component status information
-                $testResults.ComponentStatus = @{
-                    PayGlobalDatabase = $healthCheckResult.PayGlobalDatabase
-                    SelfServiceSoftware = $healthCheckResult.SelfServiceSoftware
-                    SelfServiceDatabase = $healthCheckResult.SelfServiceDatabase
-                    Bridge = $healthCheckResult.Bridge
-                    WFEDatabase = $healthCheckResult.WFEDatabase
-                    BridgeCommunication = $healthCheckResult.BridgeCommunication
-                }
-                
-                # Display component details
-                if ($healthCheckResult.Components.Count -gt 0) {
-                    Write-Host "Components found:" -ForegroundColor Gray
-                    foreach ($component in $healthCheckResult.Components) {
-                        $statusColor = if ($component.Status -eq "Healthy") { "Green" } else { "Red" }
-                        Write-Host "  - $($component.Name): $($component.Status) (v$($component.Version))" -ForegroundColor $statusColor
-                    }
-                }
-            }
-            else {
-                $testResults.TestResults += @{
-                    Test = "Health Check API"
-                    Status = "FAIL"
-                    Message = "Health check API returned invalid response"
-                    Details = "Error: $($healthCheckResult.Error)"
-                }
-                Write-Host "FAIL - Health check API test failed: $($healthCheckResult.Error)" -ForegroundColor Red
-            }
-        }
-        catch {
-            $testResults.TestResults += @{
-                Test = "Health Check API"
-                Status = "FAIL"
-                Message = "Health check API test failed"
-                Details = "Exception: $($_.Exception.Message)"
-            }
-            Write-Host "FAIL - Health check API test failed: $($_.Exception.Message)" -ForegroundColor Red
-        }
-        
-        # Generate recommendations
-        if ($testResults.HealthCheckWorking) {
-            $testResults.Recommendations += "Health check endpoint is working correctly"
-            $testResults.Recommendations += "Use Get-ESSHealthCheckViaAPI function for regular health checks"
-            $testResults.Recommendations += "Consider implementing automated monitoring using this endpoint"
-        }
-        else {
-            $testResults.Recommendations += "Verify the application path and site configuration"
-            $testResults.Recommendations += "Check IIS application pool status"
-            $testResults.Recommendations += "Verify the health check API is enabled in the application"
-        }
-        
-        return [PSCustomObject]$testResults
-        
-    }
-    catch {
-        Write-Warning "Error testing ESS health check endpoint: $_"
-        return @{
-            SiteName = $SiteName
-            ApplicationPath = $ApplicationPath
-            Protocol = $Protocol
-            Port = $Port
-            HostName = "localhost"
-            EndpointAccessible = $false
-            HealthCheckWorking = $false
-            Uri = $null
-            TestResults = @()
-            Recommendations = @("Error occurred during testing: $($_.Exception.Message)")
-            ComponentStatus = @{}
-        }
-    }
-}
 
 function Get-ESSHealthCheckForAllInstances {
     <#
@@ -848,11 +656,16 @@ function Add-APIHealthCheckResults {
         for reporting purposes.
     .PARAMETER HealthChecks
         Array of health check results from API calls
+    .PARAMETER Manager
+        HealthCheckResultManager instance for result management
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [array]$HealthChecks
+        [array]$HealthChecks,
+        
+        [Parameter(Mandatory = $true)]
+        [object]$Manager
     )
     
     try {
@@ -878,13 +691,13 @@ function Add-APIHealthCheckResults {
                     if ($healthCheck.Summary) {
                         $summaryMessage += ". Components: $($healthCheck.Summary.TotalComponents) total, $($healthCheck.Summary.HealthyComponents) healthy"
                     }
-                    Add-HealthCheckResult -Category "ESS API Health Check" -Check "Overall Status - $siteIdentifier" -Status "PASS" -Message $summaryMessage
+                    Add-HealthCheckResult -Category "ESS API Health Check" -Check "Overall Status - $siteIdentifier" -Status "PASS" -Message $summaryMessage -Manager $Manager
                 } else {
                     $errorMessage = "ESS instance $siteIdentifier health check failed"
                     if ($healthCheck.Error) {
                         $errorMessage += ": $($healthCheck.Error)"
                     }
-                    Add-HealthCheckResult -Category "ESS API Health Check" -Check "Overall Status - $siteIdentifier" -Status "FAIL" -Message $errorMessage
+                    Add-HealthCheckResult -Category "ESS API Health Check" -Check "Overall Status - $siteIdentifier" -Status "FAIL" -Message $errorMessage -Manager $Manager
                 }
             }
             catch {
@@ -914,7 +727,7 @@ function Add-APIHealthCheckResults {
                             $message += ". Messages: $($component.Data.Messages -join ', ')"
                         }
                         
-                        Add-HealthCheckResult -Category "ESS API Components" -Check "$($component.Name) - $siteIdentifier" -Status $status -Message $message
+                        Add-HealthCheckResult -Category "ESS API Components" -Check "$($component.Name) - $siteIdentifier" -Status $status -Message $message -Manager $Manager
                     }
                 }
                 catch {

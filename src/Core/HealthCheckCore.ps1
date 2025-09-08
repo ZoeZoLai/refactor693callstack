@@ -88,27 +88,6 @@ class HealthCheckResultManager {
     }
 }
 
-# Global result manager instance (singleton pattern for backward compatibility)
-$script:HealthCheckManager = $null
-
-function Get-HealthCheckManager {
-    <#
-    .SYNOPSIS
-        Gets the global health check result manager instance
-    .DESCRIPTION
-        Returns the singleton HealthCheckResultManager instance
-    .RETURNS
-        HealthCheckResultManager instance
-    #>
-    [CmdletBinding()]
-    param()
-    
-    if ($null -eq $script:HealthCheckManager) {
-        $script:HealthCheckManager = [HealthCheckResultManager]::new()
-    }
-    
-    return $script:HealthCheckManager
-}
 
 function Add-HealthCheckResult {
     <#
@@ -123,7 +102,7 @@ function Add-HealthCheckResult {
     .PARAMETER Message
         Detailed message about the check result
     .PARAMETER Manager
-        Optional HealthCheckResultManager instance (for testing)
+        HealthCheckResultManager instance (required)
     #>
     [CmdletBinding()]
     param(
@@ -140,13 +119,9 @@ function Add-HealthCheckResult {
         [Parameter(Mandatory = $true)]
         [string]$Message,
         
-        [Parameter(Mandatory = $false)]
-        [HealthCheckResultManager]$Manager = $null
+        [Parameter(Mandatory = $true)]
+        [object]$Manager
     )
-    
-    if ($null -eq $Manager) {
-        $Manager = Get-HealthCheckManager
-    }
     
     $Manager.AddResult($Category, $Check, $Status, $Message)
 }
@@ -158,44 +133,19 @@ function Get-HealthCheckResults {
     .DESCRIPTION
         Returns all health check results from the manager
     .PARAMETER Manager
-        Optional HealthCheckResultManager instance (for testing)
+        HealthCheckResultManager instance (required)
     .RETURNS
         Array of health check results
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $false)]
-        [HealthCheckResultManager]$Manager = $null
+        [Parameter(Mandatory = $true)]
+        [object]$Manager
     )
-    
-    if ($null -eq $Manager) {
-        $Manager = Get-HealthCheckManager
-    }
     
     return $Manager.GetResults()
 }
 
-function Clear-HealthCheckResults {
-    <#
-    .SYNOPSIS
-        Clears all health check results using dependency injection
-    .DESCRIPTION
-        Resets the health check results in the manager
-    .PARAMETER Manager
-        Optional HealthCheckResultManager instance (for testing)
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $false)]
-        [HealthCheckResultManager]$Manager = $null
-    )
-    
-    if ($null -eq $Manager) {
-        $Manager = Get-HealthCheckManager
-    }
-    
-    $Manager.ClearResults()
-}
 
 function Get-HealthCheckSummary {
     <#
@@ -204,74 +154,16 @@ function Get-HealthCheckSummary {
     .DESCRIPTION
         Returns statistics about the health check results
     .PARAMETER Manager
-        Optional HealthCheckResultManager instance (for testing)
+        HealthCheckResultManager instance (required)
     .RETURNS
         Object containing summary statistics
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $false)]
-        [HealthCheckResultManager]$Manager = $null
+        [Parameter(Mandatory = $true)]
+        [object]$Manager
     )
-    
-    if ($null -eq $Manager) {
-        $Manager = Get-HealthCheckManager
-    }
     
     return $Manager.GetSummary()
 }
 
-function Get-HealthCheckResultsByCategory {
-    <#
-    .SYNOPSIS
-        Gets health check results filtered by category using dependency injection
-    .PARAMETER Category
-        Category to filter by
-    .PARAMETER Manager
-        Optional HealthCheckResultManager instance (for testing)
-    .RETURNS
-        Array of health check results for the specified category
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Category,
-        
-        [Parameter(Mandatory = $false)]
-        [HealthCheckResultManager]$Manager = $null
-    )
-    
-    if ($null -eq $Manager) {
-        $Manager = Get-HealthCheckManager
-    }
-    
-    return $Manager.GetResultsByCategory($Category)
-}
-
-function Get-HealthCheckResultsByStatus {
-    <#
-    .SYNOPSIS
-        Gets health check results filtered by status using dependency injection
-    .PARAMETER Status
-        Status to filter by (PASS, FAIL, WARNING, INFO)
-    .PARAMETER Manager
-        Optional HealthCheckResultManager instance (for testing)
-    .RETURNS
-        Array of health check results for the specified status
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [ValidateSet("PASS", "FAIL", "WARNING", "INFO")]
-        [string]$Status,
-        
-        [Parameter(Mandatory = $false)]
-        [HealthCheckResultManager]$Manager = $null
-    )
-    
-    if ($null -eq $Manager) {
-        $Manager = Get-HealthCheckManager
-    }
-    
-    return $Manager.GetResultsByStatus($Status)
-}

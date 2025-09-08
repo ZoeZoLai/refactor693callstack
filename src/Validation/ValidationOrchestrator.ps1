@@ -10,6 +10,12 @@
     Version: 2.0
 #>
 
+# Note: No imports needed - manager instances are passed as parameters
+# This follows pure dependency injection principles
+
+# Note: Using [object] type for Manager parameter to avoid linter errors
+# The actual type is HealthCheckResultManager, but PowerShell linter can't resolve it
+
 class ValidationManager {
     [hashtable]$SystemInfo
     [hashtable]$DetectionResults
@@ -23,7 +29,7 @@ class ValidationManager {
         $this.ValidationResults = @()
     }
     
-    [array]RunSystemValidation([hashtable]$SystemInfo, [hashtable]$DetectionResults, [hashtable]$Configuration = $null) {
+    [array]RunSystemValidation([hashtable]$SystemInfo, [hashtable]$DetectionResults, [object]$Manager, [hashtable]$Configuration = $null) {
         Write-Host "Starting system validation checks..." -ForegroundColor Yellow
         
         try {
@@ -34,26 +40,26 @@ class ValidationManager {
             
             # Run all validation checks with injected dependencies
             if ($SystemInfo -and $SystemInfo.Count -gt 0) {
-                Test-SystemRequirements -SystemInfo $SystemInfo -Configuration $Configuration
-                Test-IISConfiguration -SystemInfo $SystemInfo
-                Test-NetworkConnectivity -SystemInfo $SystemInfo
-                Test-SecurityPermissions -SystemInfo $SystemInfo
+                Test-SystemRequirements -SystemInfo $SystemInfo -Configuration $Configuration -Manager $Manager
+                Test-IISConfiguration -SystemInfo $SystemInfo -Manager $Manager
+                Test-NetworkConnectivity -SystemInfo $SystemInfo -Manager $Manager
+                Test-SecurityPermissions -SystemInfo $SystemInfo -Manager $Manager
             } else {
                 Write-Warning "System information is not available, skipping system-dependent validation checks"
-                Add-HealthCheckResult -Category "Validation" -Check "System Information" -Status "WARNING" -Message "System information not available for validation"
+                Add-HealthCheckResult -Category "Validation" -Check "System Information" -Status "WARNING" -Message "System information not available for validation" -Manager $Manager
             }
             
-            Test-ESSWFEDetection -DetectionResults $DetectionResults
-            Test-DatabaseConnectivity -DetectionResults $DetectionResults
-            Test-WebConfigEncryptionValidation -DetectionResults $DetectionResults
-            Test-ESSVersionValidation -DetectionResults $DetectionResults -Configuration $Configuration
-            Test-ESSHTTPSValidation -DetectionResults $DetectionResults
+            Test-ESSWFEDetection -DetectionResults $DetectionResults -Manager $Manager
+            Test-DatabaseConnectivity -DetectionResults $DetectionResults -Manager $Manager
+            Test-WebConfigEncryptionValidation -DetectionResults $DetectionResults -Manager $Manager
+            Test-ESSVersionValidation -DetectionResults $DetectionResults -Configuration $Configuration -Manager $Manager
+            Test-ESSHTTPSValidation -DetectionResults $DetectionResults -Manager $Manager
             
             # Run ESS API health check validation
-            Test-ESSAPIHealthCheckValidation -DetectionResults $DetectionResults -Configuration $Configuration
+            Test-ESSAPIHealthCheckValidation -DetectionResults $DetectionResults -Configuration $Configuration -Manager $Manager
             
             # Get summary statistics
-            $summary = Get-HealthCheckSummary
+            $summary = Get-HealthCheckSummary -Manager $Manager
             $totalChecks = $summary.Total
             $passChecks = $summary.Pass
             $failChecks = $summary.Fail
@@ -70,7 +76,7 @@ class ValidationManager {
             Write-Host "`nSystem validation completed." -ForegroundColor Green
             Write-Host "Summary: $passChecks/$totalChecks passed, $failChecks failed, $warningChecks warnings, $infoChecks info items" -ForegroundColor Cyan
             
-            $this.ValidationResults = Get-HealthCheckResults
+            $this.ValidationResults = Get-HealthCheckResults -Manager $Manager
             return $this.ValidationResults
         }
         catch {
@@ -80,25 +86,8 @@ class ValidationManager {
     }
 }
 
-# Global validation manager instance
-$script:ValidationManager = $null
-
-function Get-ValidationManager {
-    <#
-    .SYNOPSIS
-        Gets the validation manager instance
-    .DESCRIPTION
-        Returns the singleton validation manager instance
-    #>
-    [CmdletBinding()]
-    param()
-    
-    if ($null -eq $script:ValidationManager) {
-        $script:ValidationManager = [ValidationManager]::new()
-    }
-    
-    return $script:ValidationManager
-}
+# ValidationManager class is now instantiated and passed through the call stack
+# No global variables needed - following call stack principles
 
 function Start-SystemValidation {
     <#
@@ -110,6 +99,10 @@ function Start-SystemValidation {
         System information object for validation
     .PARAMETER DetectionResults
         Detection results for ESS/WFE validation
+    .PARAMETER Manager
+        HealthCheckResultManager instance for result management
+    .PARAMETER ValidationManager
+        ValidationManager instance for validation operations
     .PARAMETER Configuration
         Optional configuration object for validation settings
     .RETURNS
@@ -123,12 +116,17 @@ function Start-SystemValidation {
         [Parameter(Mandatory = $true)]
         [hashtable]$DetectionResults,
         
+        [Parameter(Mandatory = $true)]
+        [object]$Manager,
+        
+        [Parameter(Mandatory = $true)]
+        [object]$ValidationManager,
+        
         [Parameter(Mandatory = $false)]
         [hashtable]$Configuration = $null
     )
 
-    $manager = Get-ValidationManager
-    return $manager.RunSystemValidation($SystemInfo, $DetectionResults, $Configuration)
+    return $ValidationManager.RunSystemValidation($SystemInfo, $DetectionResults, $Manager, $Configuration)
 }
 
 function Test-ESSAPIHealthCheckValidation {
@@ -140,6 +138,8 @@ function Test-ESSAPIHealthCheckValidation {
         with injected dependencies
     .PARAMETER DetectionResults
         Detection results containing ESS instances
+    .PARAMETER Manager
+        HealthCheckResultManager instance for result management
     .PARAMETER Configuration
         Optional configuration object for API settings
     #>
@@ -147,6 +147,9 @@ function Test-ESSAPIHealthCheckValidation {
     param(
         [Parameter(Mandatory = $true)]
         [hashtable]$DetectionResults,
+        
+        [Parameter(Mandatory = $true)]
+        [object]$Manager,
         
         [Parameter(Mandatory = $false)]
         [hashtable]$Configuration = $null
@@ -160,12 +163,12 @@ function Test-ESSAPIHealthCheckValidation {
         if (Test-Path $apiModulePath) {
             . $apiModulePath
         } else {
-            Add-HealthCheckResult -Category "ESS API Health Check" -Check "Module Loading" -Status "FAIL" -Message "ESSHealthCheckAPI.ps1 module not found at: $apiModulePath"
+            Add-HealthCheckResult -Category "ESS API Health Check" -Check "Module Loading" -Status "FAIL" -Message "ESSHealthCheckAPI.ps1 module not found at: $apiModulePath" -Manager $Manager
             return
         }
         
         if (-not $DetectionResults -or -not $DetectionResults.ESSInstances) {
-            Add-HealthCheckResult -Category "ESS API Health Check" -Check "ESS Detection" -Status "WARNING" -Message "No ESS instances detected for API health check validation"
+            Add-HealthCheckResult -Category "ESS API Health Check" -Check "ESS Detection" -Status "WARNING" -Message "No ESS instances detected for API health check validation" -Manager $Manager
             return
         }
         
@@ -201,21 +204,21 @@ function Test-ESSAPIHealthCheckValidation {
             
             if ($healthCheckCount -gt 0) {
                 # Add API health check results to global results
-                Add-APIHealthCheckResults -HealthChecks $healthChecks
+                Add-APIHealthCheckResults -HealthChecks $healthChecks -Manager $Manager
                 Write-Verbose "Successfully added $healthCheckCount ESS API health check results"
             } else {
-                Add-HealthCheckResult -Category "ESS API Health Check" -Check "API Health Check" -Status "WARNING" -Message "No health check results returned from API"
+                Add-HealthCheckResult -Category "ESS API Health Check" -Check "API Health Check" -Status "WARNING" -Message "No health check results returned from API" -Manager $Manager
             }
         }
         catch {
-            Add-HealthCheckResult -Category "ESS API Health Check" -Check "API Health Check" -Status "FAIL" -Message "Error during API health check validation: $($_.Exception.Message)"
+            Add-HealthCheckResult -Category "ESS API Health Check" -Check "API Health Check" -Status "FAIL" -Message "Error during API health check validation: $($_.Exception.Message)" -Manager $Manager
         }
     }
     catch {
         Write-Error "Error during ESS API health check validation: $_"
-        Add-HealthCheckResult -Category "ESS API Health Check" -Check "Validation Process" -Status "FAIL" -Message "Error during validation process: $($_.Exception.Message)"
+        Add-HealthCheckResult -Category "ESS API Health Check" -Check "Validation Process" -Status "FAIL" -Message "Error during validation process: $($_.Exception.Message)" -Manager $Manager
     }
 }
 
-# Initialize the validation manager when the module is loaded
-$script:ValidationManager = [ValidationManager]::new() 
+# ValidationManager instances are now created and passed through the call stack
+# No global initialization needed 

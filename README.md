@@ -15,7 +15,7 @@ The ESS Pre-Upgrade Health Checker is designed to validate system readiness for 
 
 ## 🏗️ Architecture
 
-The project follows **Call Stack Principles** with clean dependency injection, single responsibility design, and clear separation of concerns:
+The project follows **Call Stack Principles** with clean dependency injection, single responsibility design, and clear separation of concerns. **All global variables have been eliminated** in favor of explicit parameter passing through the call stack.
 
 ### 🎯 **Architecture Overview**
 
@@ -132,10 +132,15 @@ cd C:\path\to\refactor693callstack
 # Load modules manually for testing
 . .\src\Main.ps1
 
-# Run individual components
-$systemInfo = Get-SystemInformation
-$detectionResults = Get-ESSWFEDetection -SystemInfo $systemInfo
-Start-SystemValidation -SystemInfo $systemInfo -DetectionResults $detectionResults
+# Run individual components with explicit manager instances
+$healthCheckManager = [HealthCheckResultManager]::new()
+$detectionManager = [DetectionManager]::new()
+$validationManager = [ValidationManager]::new()
+$systemInfoManager = [SystemInformationManager]::new()
+
+$systemInfo = Get-SystemInformation -SystemInfoManager $systemInfoManager
+$detectionResults = Get-ESSWFEDetection -SystemInfo $systemInfo -Manager $healthCheckManager -DetectionManager $detectionManager
+Start-SystemValidation -SystemInfo $systemInfo -DetectionResults $detectionResults -Manager $healthCheckManager -ValidationManager $validationManager
 ```
 
 ## 📊 Output
@@ -190,10 +195,11 @@ This project follows strict call stack principles with a clean, modular architec
 - **Core/**: Provides foundation services and utilities
 
 ### ✅ Dependency Injection
-- Functions receive data through explicit parameters
-- No global state dependencies
-- Clear input/output contracts
-- Each module can be tested independently
+- **Zero Global Variables**: All global state has been eliminated
+- **Explicit Parameter Passing**: Manager instances passed through call stack
+- **No Hidden Dependencies**: All dependencies explicitly declared
+- **Clear Input/Output Contracts**: Functions receive data through explicit parameters
+- **Independent Testing**: Each module can be tested without global state
 
 ### ✅ Single Responsibility
 - Each folder has one clear purpose
@@ -212,6 +218,74 @@ This project follows strict call stack principles with a clean, modular architec
 - Easy to understand and modify
 - Consistent patterns throughout
 - Logical grouping of related functionality
+
+## 🔄 Refactoring Details (v2.2)
+
+### **Global Variable Elimination**
+The codebase has been completely refactored to eliminate all global variables:
+
+**Before (v2.1):**
+```powershell
+# Global variables (ANTI-PATTERN)
+$script:HealthCheckManager = $null
+$script:ValidationManager = $null
+$script:DetectionManager = $null
+
+function Get-HealthCheckManager {
+    if (-not $script:HealthCheckManager) {
+        $script:HealthCheckManager = [HealthCheckResultManager]::new()
+    }
+    return $script:HealthCheckManager
+}
+```
+
+**After (v2.2):**
+```powershell
+# Pure dependency injection (CLEAN)
+function Start-ESSHealthChecks {
+    param()
+    
+    # Create manager instances at top level
+    $healthCheckManager = [HealthCheckResultManager]::new()
+    $detectionManager = [DetectionManager]::new()
+    $validationManager = [ValidationManager]::new()
+    $systemInfoManager = [SystemInformationManager]::new()
+    
+    # Pass managers through call stack
+    $systemInfo = Get-SystemInformation -SystemInfoManager $systemInfoManager
+    $detectionResults = Get-ESSWFEDetection -SystemInfo $systemInfo -Manager $healthCheckManager -DetectionManager $detectionManager
+    Start-SystemValidation -SystemInfo $systemInfo -DetectionResults $detectionResults -Manager $healthCheckManager -ValidationManager $validationManager
+}
+```
+
+### **Manager Classes**
+Four manager classes handle different aspects of the health check:
+
+- **`HealthCheckResultManager`**: Manages health check results and reporting
+- **`DetectionManager`**: Handles ESS/WFE detection logic
+- **`ValidationManager`**: Coordinates validation checks
+- **`SystemInformationManager`**: Manages system information collection
+
+### **Parameter Passing Pattern**
+All functions now follow a consistent parameter passing pattern:
+
+```powershell
+function Example-Function {
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$SystemInfo,
+        
+        [Parameter(Mandatory = $true)]
+        [object]$Manager,  # HealthCheckResultManager instance
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$Configuration = $null
+    )
+    
+    # Use manager instance for operations
+    $Manager.AddResult($Category, $Check, $Status, $Message)
+}
+```
 
 ## 📝 Example Output
 
@@ -285,11 +359,13 @@ Health Check Results:
 
 ## 🤝 Contributing
 
-1. Follow the established call stack principles
-2. Maintain single responsibility for each module
-3. Use dependency injection for all functions
-4. Add comprehensive error handling
-5. Include verbose logging for debugging
+1. **Follow Call Stack Principles**: Pass all dependencies as explicit parameters
+2. **No Global Variables**: Never use `$script:` or global variables
+3. **Dependency Injection**: All manager instances must be passed as parameters
+4. **Single Responsibility**: Maintain single responsibility for each module
+5. **Comprehensive Error Handling**: Add proper error handling and logging
+6. **Parameter Validation**: Validate all input parameters
+7. **Type Safety**: Use proper type declarations for parameters
 
 ## 📄 License
 
@@ -305,11 +381,20 @@ For issues or questions:
 
 ---
 
-**Version**: 2.1 - Clean Architecture with Separation of Concerns  
-**Last Updated**: September 2025  
+**Version**: 2.2 - Zero Global Variables with Pure Dependency Injection  
+**Last Updated**: January 2025  
 **Author**: Zoe Lai
 
-### 🎉 **Recent Improvements (v2.1)**
+### 🎉 **Recent Improvements (v2.2)**
+- **✅ Zero Global Variables**: Completely eliminated all `$script:` global variables
+- **✅ Pure Dependency Injection**: All manager instances passed through call stack
+- **✅ Enhanced Type Safety**: Proper type declarations for all parameters
+- **✅ Improved Error Handling**: Better parameter validation and error messages
+- **✅ Cleaner Architecture**: No hidden dependencies or global state
+- **✅ Better Testability**: Functions can be tested in complete isolation
+- **✅ Maintainable Code**: Clear data flow through explicit parameters
+
+### 🎉 **Previous Improvements (v2.1)**
 - **✅ Restructured Architecture**: Separated discovery, information collection, and validation into distinct folders
 - **✅ Improved Maintainability**: Clear separation of concerns with single responsibility per folder
 - **✅ Enhanced Testability**: Each phase can be tested independently

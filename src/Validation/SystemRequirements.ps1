@@ -18,6 +18,8 @@ function Test-SystemRequirements {
         Validates system requirements using injected dependencies
     .PARAMETER SystemInfo
         System information object containing hardware, OS, and software details
+    .PARAMETER Manager
+        HealthCheckResultManager instance for result management
     .PARAMETER Configuration
         Optional configuration object containing minimum requirements
     #>
@@ -25,6 +27,9 @@ function Test-SystemRequirements {
     param(
         [Parameter(Mandatory = $true)]
         [hashtable]$SystemInfo,
+        
+        [Parameter(Mandatory = $true)]
+        [object]$Manager,
         
         [Parameter(Mandatory = $false)]
         [hashtable]$Configuration = $null
@@ -43,12 +48,12 @@ function Test-SystemRequirements {
         $requiredDiskSpace = $config.MinimumRequirements.MinimumDiskSpaceGB
         
         if ($freeSpaceGB -lt $requiredDiskSpace) {
-            Add-HealthCheckResult -Category "System Requirements" -Check "Free Disk Space" -Status "FAIL" -Message "Insufficient disk space. Available: $freeSpaceGB (Total: $diskSpaceGB) GB - Required: $requiredDiskSpace GB"
+            Add-HealthCheckResult -Category "System Requirements" -Check "Free Disk Space" -Status "FAIL" -Message "Insufficient disk space. Available: $freeSpaceGB (Total: $diskSpaceGB) GB - Required: $requiredDiskSpace GB" -Manager $Manager
         } else {
-            Add-HealthCheckResult -Category "System Requirements" -Check "Free Disk Space" -Status "PASS" -Message "Sufficient disk space available. Available: $freeSpaceGB (Total: $diskSpaceGB) GB - meets requirement of $requiredDiskSpace GB"
+            Add-HealthCheckResult -Category "System Requirements" -Check "Free Disk Space" -Status "PASS" -Message "Sufficient disk space available. Available: $freeSpaceGB (Total: $diskSpaceGB) GB - meets requirement of $requiredDiskSpace GB" -Manager $Manager
         }
     } else {
-        Add-HealthCheckResult -Category "System Requirements" -Check "Free Disk Space" -Status "WARNING" -Message "Could not determine disk space"
+        Add-HealthCheckResult -Category "System Requirements" -Check "Free Disk Space" -Status "WARNING" -Message "Could not determine disk space" -Manager $Manager
     }
     
     # Test memory
@@ -56,9 +61,9 @@ function Test-SystemRequirements {
     $requiredMemory = $config.MinimumRequirements.MinimumMemoryGB
     
     if ($totalMemory -lt $requiredMemory) {
-        Add-HealthCheckResult -Category "System Requirements" -Check "Memory" -Status "FAIL" -Message "Insufficient memory. Available: $totalMemory GB - Required: $requiredMemory GB"
+        Add-HealthCheckResult -Category "System Requirements" -Check "Memory" -Status "FAIL" -Message "Insufficient memory. Available: $totalMemory GB - Required: $requiredMemory GB" -Manager $Manager
     } else {
-        Add-HealthCheckResult -Category "System Requirements" -Check "Memory" -Status "PASS" -Message "Sufficient memory available. Available: $totalMemory GB - meets requirement of $requiredMemory GB"
+        Add-HealthCheckResult -Category "System Requirements" -Check "Memory" -Status "PASS" -Message "Sufficient memory available. Available: $totalMemory GB - meets requirement of $requiredMemory GB" -Manager $Manager
     }
     
     # Test CPU cores
@@ -66,9 +71,9 @@ function Test-SystemRequirements {
     $requiredCores = $config.MinimumRequirements.MinimumCores
     
     if ($totalCores -lt $requiredCores) {
-        Add-HealthCheckResult -Category "System Requirements" -Check "CPU Cores" -Status "FAIL" -Message "Insufficient CPU cores. Available: $totalCores - Required: $requiredCores"
+        Add-HealthCheckResult -Category "System Requirements" -Check "CPU Cores" -Status "FAIL" -Message "Insufficient CPU cores. Available: $totalCores - Required: $requiredCores" -Manager $Manager
     } else {
-        Add-HealthCheckResult -Category "System Requirements" -Check "CPU Cores" -Status "PASS" -Message "Sufficient CPU cores available. Available: $totalCores - meets requirement of $requiredCores"
+        Add-HealthCheckResult -Category "System Requirements" -Check "CPU Cores" -Status "PASS" -Message "Sufficient CPU cores available. Available: $totalCores - meets requirement of $requiredCores" -Manager $Manager
     }
     
     # Test processor speed
@@ -76,9 +81,9 @@ function Test-SystemRequirements {
     $requiredProcessorSpeed = $config.MinimumRequirements.MinimumProcessorSpeedGHz
     
     if ($averageProcessorSpeed -lt $requiredProcessorSpeed) {
-        Add-HealthCheckResult -Category "System Requirements" -Check "Processor Speed" -Status "FAIL" -Message "Insufficient processor speed. Available: $averageProcessorSpeed GHz - Required: $requiredProcessorSpeed GHz"
+        Add-HealthCheckResult -Category "System Requirements" -Check "Processor Speed" -Status "FAIL" -Message "Insufficient processor speed. Available: $averageProcessorSpeed GHz - Required: $requiredProcessorSpeed GHz" -Manager $Manager
     } else {
-        Add-HealthCheckResult -Category "System Requirements" -Check "Processor Speed" -Status "PASS" -Message "Sufficient processor speed available. Available: $averageProcessorSpeed GHz - meets requirement of $requiredProcessorSpeed GHz"
+        Add-HealthCheckResult -Category "System Requirements" -Check "Processor Speed" -Status "PASS" -Message "Sufficient processor speed available. Available: $averageProcessorSpeed GHz - meets requirement of $requiredProcessorSpeed GHz" -Manager $Manager
     }
     
     # Test IIS installation and version
@@ -94,12 +99,12 @@ function Test-SystemRequirements {
         $requiredVersionNum = [double]"$($requiredVersionParts[0]).$($requiredVersionParts[1])"
         
         if ($iisVersionNum -ge $requiredVersionNum) {
-            Add-HealthCheckResult -Category "System Requirements" -Check "IIS Installation" -Status "PASS" -Message "IIS is installed (Version: $iisVersion) - meets minimum requirement of $requiredIISVersion"
+            Add-HealthCheckResult -Category "System Requirements" -Check "IIS Installation" -Status "PASS" -Message "IIS is installed (Version: $iisVersion) - meets minimum requirement of $requiredIISVersion" -Manager $Manager
         } else {
-            Add-HealthCheckResult -Category "System Requirements" -Check "IIS Installation" -Status "FAIL" -Message "IIS version $iisVersion is below minimum requirement of $requiredIISVersion"
+            Add-HealthCheckResult -Category "System Requirements" -Check "IIS Installation" -Status "FAIL" -Message "IIS version $iisVersion is below minimum requirement of $requiredIISVersion" -Manager $Manager
         }
     } else {
-        Add-HealthCheckResult -Category "System Requirements" -Check "IIS Installation" -Status "FAIL" -Message "IIS is not installed. Required for ESS deployment."
+        Add-HealthCheckResult -Category "System Requirements" -Check "IIS Installation" -Status "FAIL" -Message "IIS is not installed. Required for ESS deployment." -Manager $Manager
     }
     
     # Test .NET Framework version
@@ -117,12 +122,12 @@ function Test-SystemRequirements {
         $requiredDotNetNum = [double]"$($requiredDotNetParts[0]).$($requiredDotNetParts[1])"
         
         if ($dotNetVersionNum -ge $requiredDotNetNum) {
-            Add-HealthCheckResult -Category "System Requirements" -Check ".NET Framework" -Status "PASS" -Message ".NET Framework $highestDotNetVersion installed - meets minimum requirement of $requiredDotNetVersion"
+            Add-HealthCheckResult -Category "System Requirements" -Check ".NET Framework" -Status "PASS" -Message ".NET Framework $highestDotNetVersion installed - meets minimum requirement of $requiredDotNetVersion" -Manager $Manager
         } else {
-            Add-HealthCheckResult -Category "System Requirements" -Check ".NET Framework" -Status "FAIL" -Message ".NET Framework $highestDotNetVersion is below minimum requirement of $requiredDotNetVersion"
+            Add-HealthCheckResult -Category "System Requirements" -Check ".NET Framework" -Status "FAIL" -Message ".NET Framework $highestDotNetVersion is below minimum requirement of $requiredDotNetVersion" -Manager $Manager
         }
     } else {
-        Add-HealthCheckResult -Category "System Requirements" -Check ".NET Framework" -Status "FAIL" -Message ".NET Framework is not installed. Required version: $requiredDotNetVersion"
+        Add-HealthCheckResult -Category "System Requirements" -Check ".NET Framework" -Status "FAIL" -Message ".NET Framework is not installed. Required version: $requiredDotNetVersion" -Manager $Manager
     }
     
     # Test OS version and type
@@ -144,12 +149,12 @@ function Test-SystemRequirements {
         }
         
         if ($osSupported) {
-            Add-HealthCheckResult -Category "System Requirements" -Check "Operating System" -Status "PASS" -Message "Server OS is supported: $osCaption (Detected: $serverVersion)"
+            Add-HealthCheckResult -Category "System Requirements" -Check "Operating System" -Status "PASS" -Message "Server OS is supported: $osCaption (Detected: $serverVersion)" -Manager $Manager
         } else {
-            Add-HealthCheckResult -Category "System Requirements" -Check "Operating System" -Status "FAIL" -Message "Server OS is too old: $osCaption. Minimum required: $($requiredOSVersions -join ', ')"
+            Add-HealthCheckResult -Category "System Requirements" -Check "Operating System" -Status "FAIL" -Message "Server OS is too old: $osCaption. Minimum required: $($requiredOSVersions -join ', ')" -Manager $Manager
         }
     } else {
         # Client OS - show as INFO since ESS is designed for server deployment
-        Add-HealthCheckResult -Category "System Requirements" -Check "Operating System" -Status "INFO" -Message "Client OS detected: $osCaption. ESS is designed for server deployment, but health check can still run on client systems."
+        Add-HealthCheckResult -Category "System Requirements" -Check "Operating System" -Status "INFO" -Message "Client OS detected: $osCaption. ESS is designed for server deployment, but health check can still run on client systems." -Manager $Manager
     }
 } 
