@@ -40,6 +40,8 @@ refactor693callstack/
 │   │   ├── WFEDetection.ps1 # WFE installation detection
 │   │   ├── ESSHealthCheckAPI.ps1 # API health check functions
 │   │   └── DetectionOrchestrator.ps1 # Detection coordination
+│   ├── Interactive/       # Interactive mode modules
+│   │   └── InteractiveHealthCheck.ps1 # Interactive health check functionality
 │   ├── SystemInfo/        # System information collection
 │   │   ├── OSInfo.ps1     # Operating system information
 │   │   ├── HardwareInfo.ps1 # Hardware & network information
@@ -54,13 +56,19 @@ refactor693callstack/
 │   │   └── SystemValidation.ps1 # Validation wrapper
 │   ├── Utils/             # Utility functions
 │   │   └── HelperFunctions.ps1 # Common helper functions
+│   ├── Main.ps1           # Main orchestration script
 │   └── tests/             # Test files
-├── RunHealthCheck.ps1     # Main launcher script
+├── RunHealthCheck.ps1     # Legacy automated launcher script
+├── RunInteractiveHealthCheck.ps1 # New interactive launcher script
 ├── README.md              # This documentation
 └── .gitignore             # Git ignore rules
 ```
 
 ## 🚀 Features
+
+### ✅ **Dual Operation Modes**
+- **Automated Mode**: Complete system-wide health check of all detected instances
+- **Interactive Mode**: Selective health check of user-chosen instances with custom ESS URL
 
 ### ✅ System Requirements Validation
 - **Hardware**: Memory, CPU cores, processor speed, disk space
@@ -73,12 +81,14 @@ refactor693callstack/
 - **Configuration Parsing**: Reads payglobal.config and tenants.config
 - **Version Detection**: Extracts ESS and PayGlobal versions
 - **Database Connection**: Validates database connectivity
+- **Interactive Selection**: User can choose specific instances to check
 
 ### ✅ API Health Checks
 - **Endpoint Validation**: Tests ESS API endpoints
 - **Component Status**: Checks PayGlobal Database, SelfService Software, Bridge
 - **Response Parsing**: Handles JSON/XML health check responses
 - **Error Handling**: Comprehensive error reporting
+- **Custom URL Support**: Interactive mode allows custom ESS URL input
 
 ### ✅ Configuration Validation
 - **Web.config Encryption**: Validates encryption for SingleSignOn
@@ -91,6 +101,7 @@ refactor693callstack/
 - **Executive Summary**: High-level status overview
 - **Detailed Results**: Per-check results with explanations
 - **Recommendations**: Actionable upgrade guidance
+- **Targeted Reports**: Interactive mode generates reports for selected instances only
 
 ## 📋 Prerequisites
 
@@ -116,10 +127,44 @@ cd C:\path\to\refactor693callstack
 
 ## 📖 Usage
 
-### Basic Usage
+### **Interactive Mode (Recommended)**
+
+The new interactive health checker provides a user-friendly menu to choose between automated and interactive modes:
 
 ```powershell
-# Run complete health check
+# Launch interactive health checker
+.\RunInteractiveHealthCheck.ps1
+```
+
+**Interactive Mode Features:**
+- **Mode Selection**: Choose between automated or interactive health checking
+- **Instance Selection**: View all detected ESS/WFE instances with details (site, type, alias)
+- **Selective Checking**: Choose specific instances to validate (comma-separated numbers)
+- **Custom ESS URL**: Input custom ESS URL for API health checks
+- **Targeted Reports**: Generate reports only for selected instances
+
+### **Interactive Mode Workflow**
+
+1. **Launch**: Run `.\RunInteractiveHealthCheck.ps1`
+2. **Mode Selection**: Choose between automated (1) or interactive (2) mode
+3. **System Discovery**: Tool automatically collects system info and detects all ESS/WFE instances
+4. **Instance Display**: View all detected instances with:
+   - Site name
+   - Instance type (ESS or WFE)
+   - Instance alias
+   - Installation path
+5. **Instance Selection**: Choose which instances to check:
+   - Enter ESS instance numbers (e.g., `1,3` for instances 1 and 3)
+   - Enter WFE instance numbers (e.g., `2` for instance 2)
+   - Leave empty to skip that instance type
+6. **ESS URL Input**: Provide custom ESS URL for API health checks
+7. **Selective Validation**: Tool performs health checks only on selected instances
+8. **Targeted Report**: Generate HTML report with results for selected instances only
+
+### **Automated Mode (Legacy)**
+
+```powershell
+# Run complete automated health check
 .\RunHealthCheck.ps1
 
 # Run with verbose output
@@ -157,6 +202,7 @@ Start-SystemValidation -SystemInfo $systemInfo -DetectionResults $detectionResul
 - **System Information**: Hardware, OS, IIS, SQL Server details
 - **ESS/WFE Instances**: Detected installations with configuration
 - **Recommendations**: Actionable upgrade guidance
+- **Interactive Reports**: Targeted reports for selected instances only (interactive mode)
 
 ## 🔧 Configuration
 
@@ -289,6 +335,65 @@ function Example-Function {
 
 ## 📝 Example Output
 
+### **Interactive Mode Example**
+
+```
+ESS Pre-Upgrade Health Checker - Interactive Mode
+=================================================
+
+Choose Health Check Mode:
+1. Automated Health Check (check all detected instances)
+2. Interactive Health Check (select specific instances)
+
+Enter your choice (1 or 2): 2
+
+=== Interactive Health Check Mode ===
+
+Step 1: Collecting system information...
+System information collection completed successfully
+
+Step 2: Detecting ESS/WFE installations...
+[PASS] Found 3 ESS installation(s)
+[PASS] Found 3 WFE installation(s)
+
+=== Available ESS and WFE Instances ===
+
+ESS Instances:
+1. Site: Default Web Site, Alias: ESS, Path: C:\inetpub\wwwroot\ESS
+2. Site: ESS-Site, Alias: ESS-Dev, Path: C:\inetpub\wwwroot\ESS-Dev
+3. Site: ESS-Site, Alias: ESS-Test, Path: C:\inetpub\wwwroot\ESS-Test
+
+WFE Instances:
+1. Site: Default Web Site, Alias: WFE, Path: C:\inetpub\wwwroot\WFE
+2. Site: WFE-Site, Alias: WFE-Dev, Path: C:\inetpub\wwwroot\WFE-Dev
+
+Enter ESS instance numbers to check (comma-separated, e.g., 1,3): 1,2
+Enter WFE instance numbers to check (comma-separated, e.g., 1,2): 1
+Enter ESS URL for API health check: https://ess.company.com/api/v1/healthcheck
+
+Step 3: Running validation checks on selected instances...
+[PASS] System Requirements - Memory : Sufficient memory available
+[PASS] Database Connectivity - ESS - PG Database Connection : Successfully connected
+[PASS] ESS API Health Check - Overall Status : ESS instance is healthy
+
+Step 4: Generating targeted health check report...
+Report generated successfully at: C:\path\to\refactor693callstack\Reports\ESS_Interactive_HealthCheck_Report_20250908_215433.html
+
+=== Interactive Health Check Summary ===
+Selected Instances:
+  ESS Instances Selected: 2
+  WFE Instances Selected: 1
+  ESS URL: https://ess.company.com/api/v1/healthcheck
+Health Check Results:
+  Total Checks: 25
+  Passed: 23
+  Failed: 1
+  Warnings: 1
+  Info: 0
+```
+
+### **Automated Mode Example**
+
 ```
 ESS Pre-Upgrade Health Checker
 ===============================
@@ -381,11 +486,20 @@ For issues or questions:
 
 ---
 
-**Version**: 2.2 - Zero Global Variables with Pure Dependency Injection  
+**Version**: 2.3 - Interactive Health Checker with Dual Operation Modes  
 **Last Updated**: January 2025  
 **Author**: Zoe Lai
 
-### 🎉 **Recent Improvements (v2.2)**
+### 🎉 **Recent Improvements (v2.3)**
+- **✅ Interactive Health Checker**: New interactive mode with user-friendly instance selection
+- **✅ Dual Operation Modes**: Choose between automated (all instances) or interactive (selected instances)
+- **✅ Instance Selection**: View and select specific ESS/WFE instances with detailed information
+- **✅ Custom ESS URL Support**: Input custom ESS URL for API health checks in interactive mode
+- **✅ Targeted Reports**: Generate reports only for selected instances with accurate wording
+- **✅ Enhanced User Experience**: Clear distinction between "found" vs "selected" instances in reports
+- **✅ Improved Report Generation**: Reports generated in correct location with proper path resolution
+
+### 🎉 **Previous Improvements (v2.2)**
 - **✅ Zero Global Variables**: Completely eliminated all `$script:` global variables
 - **✅ Pure Dependency Injection**: All manager instances passed through call stack
 - **✅ Enhanced Type Safety**: Proper type declarations for all parameters

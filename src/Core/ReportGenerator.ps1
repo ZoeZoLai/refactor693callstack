@@ -43,7 +43,10 @@ function New-HealthCheckReport {
         [object]$Manager,
         
         [Parameter(Mandatory = $false)]
-        [string]$OutputPath = $null
+        [string]$OutputPath = $null,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$ReportFileName = $null
     )
 
     try {
@@ -61,8 +64,12 @@ function New-HealthCheckReport {
             New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
         }
         
-        # Generate report filename with default format
-        $reportName = "ESS_HealthCheck_Report_{0:yyyyMMdd_HHmmss}.html" -f (Get-Date)
+        # Generate report filename - use custom name if provided, otherwise use default format
+        if ($ReportFileName) {
+            $reportName = $ReportFileName
+        } else {
+            $reportName = "ESS_HealthCheck_Report_{0:yyyyMMdd_HHmmss}.html" -f (Get-Date)
+        }
         $reportPath = Join-Path $OutputPath $reportName
         
         # Generate HTML content
@@ -509,11 +516,11 @@ function New-ReportHTML {
 
             <!-- ESS/WFE Instances -->
             <div class="section">
-                <div class="section-header">ESS and WFE Instances</div>
+                <div class="section-header">$(if ($detectionResults.IsInteractiveReport) { "Selected ESS and WFE Instances" } else { "ESS and WFE Instances" })</div>
                 <div class="section-content">
                     $(if ($detectionResults -and $detectionResults.ESSInstances.Count -gt 0) { 
                         $essTable = @"
-                    <h4>ESS Instances Found: $($detectionResults.ESSInstances.Count)</h4>
+                    <h4>ESS Instances $(if ($detectionResults.IsInteractiveReport) { "Selected" } else { "Found" }): $($detectionResults.ESSInstances.Count)</h4>
                     <div class="table-container">
                     <table class="instances-table">
                         <thead>
@@ -565,12 +572,12 @@ function New-ReportHTML {
 "@
                         $essTable
                     } else { 
-                        "<p>No ESS instances found on this machine.</p>"
+                        "<p>$(if ($detectionResults.IsInteractiveReport) { "No ESS instances selected for this health check." } else { "No ESS instances found on this machine." })</p>"
                     })
                     
                     $(if ($detectionResults -and $detectionResults.WFEInstances.Count -gt 0) { 
                         $wfeTable = @"
-                    <h4>WFE Instances Found: $($detectionResults.WFEInstances.Count)</h4>
+                    <h4>WFE Instances $(if ($detectionResults.IsInteractiveReport) { "Selected" } else { "Found" }): $($detectionResults.WFEInstances.Count)</h4>
                     <div class="table-container">
                     <table class="instances-table">
                         <thead>
@@ -613,7 +620,7 @@ function New-ReportHTML {
 "@
                         $wfeTable
                     } else { 
-                        "<p>No WFE instances found on this machine.</p>"
+                        "<p>$(if ($detectionResults.IsInteractiveReport) { "No WFE instances selected for this health check." } else { "No WFE instances found on this machine." })</p>"
                     })
                 </div>
             </div>
@@ -669,4 +676,108 @@ function New-ReportHTML {
 
     return $html
 }
+
+function New-TargetedHealthCheckReport {
+    <#
+    .SYNOPSIS
+        Generates a targeted HTML health check report for selected instances
+    .DESCRIPTION
+        Creates a focused HTML report from health check results for selected instances only
+        Uses the same layout as the original report but only includes selected instances
+    .PARAMETER Results
+        Array of health check results
+    .PARAMETER SystemInfo
+        System information hashtable
+    .PARAMETER SelectedInstances
+        Selected instances object containing ESS and WFE instances
+    .PARAMETER ESSUrl
+        ESS URL used for API health checks
+    .PARAMETER Manager
+        HealthCheckResultManager instance for result management
+    .PARAMETER OutputPath
+        Optional output path for the report
+    .RETURNS
+        Path to the generated report
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [array]$Results,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$SystemInfo = $null,
+        
+        [Parameter(Mandatory = $true)]
+        [hashtable]$SelectedInstances,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$ESSUrl = $null,
+        
+        [Parameter(Mandatory = $true)]
+        [object]$Manager,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$OutputPath = $null
+    )
+
+    try {
+        Write-Verbose "Generating targeted health check report..."
+        
+        # Generate report filename with timestamp
+        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+        $reportFileName = "ESS_Interactive_HealthCheck_Report_$timestamp.html"
+        
+        # Determine output path
+        if (-not $OutputPath) {
+            # Use root-level Reports folder (two levels up from src/Core) - same as regular report
+            $rootPath = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+            $reportsPath = Join-Path $rootPath "Reports"
+            Write-Verbose "Script root: $PSScriptRoot"
+            Write-Verbose "Project root: $rootPath"
+            Write-Verbose "Reports path: $reportsPath"
+            if (-not (Test-Path $reportsPath)) {
+                New-Item -ItemType Directory -Path $reportsPath -Force | Out-Null
+            }
+            $OutputPath = $reportsPath  # Pass only the directory path, not the filename
+            Write-Verbose "Output directory: $OutputPath"
+        }
+        
+        # Ensure the output path is valid
+        if ([string]::IsNullOrWhiteSpace($OutputPath)) {
+            throw "Output path is null or empty"
+        }
+        
+        Write-Verbose "Using output path: $OutputPath"
+        
+        # Create modified detection results with only selected instances
+        $selectiveDetectionResults = @{
+            IISInstalled = $true  # Assume IIS is installed if we have instances
+            ESSInstances = $SelectedInstances.ESSInstances
+            WFEInstances = $SelectedInstances.WFEInstances
+            DeploymentType = if ($SelectedInstances.ESSInstances.Count -gt 0 -and $SelectedInstances.WFEInstances.Count -gt 0) {
+                "Combined"
+            } elseif ($SelectedInstances.ESSInstances.Count -gt 0) {
+                "ESS Only"
+            } elseif ($SelectedInstances.WFEInstances.Count -gt 0) {
+                "WFE Only"
+            } else {
+                "None"
+            }
+            Summary = @()
+        }
+        
+        # Use the existing report generation function with modified detection results
+        # Add a flag to indicate this is an interactive report for different wording
+        $selectiveDetectionResults.IsInteractiveReport = $true
+        $reportPath = New-HealthCheckReport -Results $Results -SystemInfo $SystemInfo -DetectionResults $selectiveDetectionResults -Manager $Manager -OutputPath $OutputPath -ReportFileName $reportFileName
+        
+        Write-Host "Targeted health check report generated: $reportPath" -ForegroundColor Green
+        return $reportPath
+    }
+    catch {
+        Write-Error "Error generating targeted health check report: $_"
+        throw
+    }
+}
+
 

@@ -41,6 +41,9 @@ Write-Host "Loading ESS Health Checker modules..." -ForegroundColor Yellow
 # Report generation (depends on all other modules)
 . .\Core\ReportGenerator.ps1
 
+# Interactive functionality (depends on all other modules)
+. .\Interactive\InteractiveHealthCheck.ps1
+
 Write-Host "All modules loaded successfully!" -ForegroundColor Green
 
 function Start-ESSHealthChecks {
@@ -109,6 +112,93 @@ function Start-ESSHealthChecks {
     } 
     catch {
         Write-Error "An error occurred during the ESS Health Check: $_"
+        throw
+    }
+}
+
+function Start-InteractiveESSHealthChecks {
+    <#
+    .SYNOPSIS
+        Starts the Interactive ESS Health Check process
+    .DESCRIPTION
+        Runs an interactive health check workflow that allows users to:
+        1. Select specific ESS/WFE instances to check
+        2. Provide ESS URL for API health checks
+        3. Generate targeted reports for selected instances only
+    .RETURNS
+        Path to the generated report
+    #>
+    [CmdletBinding()]
+    param()
+
+    try {
+        Write-Host "Starting Interactive ESS Pre-Upgrade Health Checks..." -ForegroundColor Cyan
+        
+        # Create all manager instances at the top level - no global variables needed
+        $healthCheckManager = New-Object -TypeName HealthCheckResultManager
+        $detectionManager = New-Object -TypeName DetectionManager
+        $validationManager = New-Object -TypeName ValidationManager
+        $systemInfoManager = New-Object -TypeName SystemInformationManager
+        
+        # Step 1: Collect system information
+        Write-Host "Step 1: Collecting system information..." -ForegroundColor Yellow
+        $systemInfo = Get-SystemInformation -SystemInfoManager $systemInfoManager
+        
+        # Step 2: Detect ESS/WFE installations
+        Write-Host "Step 2: Detecting ESS/WFE installations..." -ForegroundColor Yellow
+        $detectionResults = Get-ESSWFEDetection -SystemInfo $systemInfo -Manager $healthCheckManager -DetectionManager $detectionManager
+        
+        # Step 3: Interactive instance selection
+        Write-Host "Step 3: Interactive instance selection..." -ForegroundColor Yellow
+        $selectedInstances = Show-InstanceSelectionMenu -DetectionResults $detectionResults
+        
+        if ($selectedInstances.ESSInstances.Count -eq 0 -and $selectedInstances.WFEInstances.Count -eq 0) {
+            Write-Host "No instances selected. Exiting interactive health check." -ForegroundColor Yellow
+            return $null
+        }
+        
+        # Step 4: Get ESS URL for API health checks
+        Write-Host "Step 4: ESS URL configuration..." -ForegroundColor Yellow
+        $essUrl = Get-ESSURLInput -SelectedInstances $selectedInstances
+        
+        # Step 5: Run selective validation checks
+        Write-Host "Step 5: Running selective validation checks..." -ForegroundColor Yellow
+        Start-SelectiveSystemValidation -SystemInfo $systemInfo -SelectedInstances $selectedInstances -ESSUrl $essUrl -Manager $healthCheckManager -ValidationManager $validationManager
+        
+        # Step 6: Generate targeted report
+        Write-Host "Step 6: Generating targeted health check report..." -ForegroundColor Yellow
+        $results = Get-HealthCheckResults -Manager $healthCheckManager
+        $reportPath = New-TargetedHealthCheckReport -Results $results -SystemInfo $systemInfo -SelectedInstances $selectedInstances -ESSUrl $essUrl -Manager $healthCheckManager
+        
+        # Step 7: Display summary
+        Write-Host "`n=== Interactive Health Check Summary ===" -ForegroundColor Magenta
+        Write-Host "System Information:" -ForegroundColor White
+        Write-Host "  Computer Name: $($systemInfo.ComputerName)" -ForegroundColor White
+        Write-Host "  OS Version: $($systemInfo.OS.Caption)" -ForegroundColor White
+        Write-Host "  IIS Installed: $($systemInfo.IIS.IsInstalled)" -ForegroundColor White
+        
+        Write-Host "Selected Instances:" -ForegroundColor White
+        Write-Host "  ESS Instances: $($selectedInstances.ESSInstances.Count)" -ForegroundColor White
+        Write-Host "  WFE Instances: $($selectedInstances.WFEInstances.Count)" -ForegroundColor White
+        if ($essUrl) {
+            Write-Host "  ESS URL for API: $essUrl" -ForegroundColor White
+        }
+        
+        $summary = Get-HealthCheckSummary -Manager $healthCheckManager
+        Write-Host "Health Check Results:" -ForegroundColor White
+        Write-Host "  Total Checks: $($summary.Total)" -ForegroundColor White
+        Write-Host "  Passed: $($summary.Pass)" -ForegroundColor Green
+        Write-Host "  Failed: $($summary.Fail)" -ForegroundColor Red
+        Write-Host "  Warnings: $($summary.Warning)" -ForegroundColor Yellow
+        Write-Host "  Info: $($summary.Info)" -ForegroundColor Cyan
+        Write-Host "=========================================" -ForegroundColor Magenta
+        
+        Write-Host "`nInteractive Health Checks completed successfully!" -ForegroundColor Green
+        Write-Host "Report generated at: $reportPath" -ForegroundColor Cyan
+        return $reportPath
+    } 
+    catch {
+        Write-Error "An error occurred during the Interactive ESS Health Check: $_"
         throw
     }
 }
