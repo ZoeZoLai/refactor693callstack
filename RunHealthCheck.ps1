@@ -30,8 +30,6 @@ Write-Host ""
 
 try {
     # Import the main script
-    Write-Host "Loading ESS Health Checker modules..." -ForegroundColor Yellow
-    
     # Change to src directory for proper module loading
     $srcPath = Join-Path $scriptPath "src"
     if (Test-Path $srcPath) {
