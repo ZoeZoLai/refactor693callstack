@@ -328,16 +328,45 @@ function Get-ESSHealthCheckViaAPI {
                         
                         Write-Verbose "Processing component: $componentName (v$componentVersion, Success: $componentSuccess)"
                         
-                        @{
+                        $component = @{
                             Name = $componentName
                             Version = $componentVersion
                             Status = if ($componentSuccess -eq "true") { "Healthy" } else { "Unhealthy" }
                             Messages = @()
                         }
+                        
+                        # Extract component messages with type and detail
+                        if ($componentMessages) {
+                            foreach ($message in $componentMessages) {
+                                if ($message.PSObject.Properties.Name -contains "Type" -and $message.PSObject.Properties.Name -contains "Message") {
+                                    $component.Messages += @{
+                                        Type = $message.Type
+                                        Detail = $message.Message
+                                        FullMessage = "$($message.Type): $($message.Message)"
+                                    }
+                                } else {
+                                    # Handle simple string messages
+                                    $component.Messages += @{
+                                        Type = "Info"
+                                        Detail = $message
+                                        FullMessage = $message
+                                    }
+                                }
+                            }
+                        }
+                        
+                        return $component
                     }
                     
                     # Extract specific component information
                     $healthCheckResult = Get-ComponentInfo -HealthCheckResult $healthCheckResult -Components $components
+                    
+                    # Collect all component messages for summary
+                    $healthCheckResult.ComponentMessages = $healthCheckResult.Components | ForEach-Object {
+                        if ($_.Messages.Count -gt 0) {
+                            $_.Messages | ForEach-Object { $_.FullMessage }
+                        }
+                    }
                 } else {
                     Write-Verbose "No components found in XML response"
                 }
