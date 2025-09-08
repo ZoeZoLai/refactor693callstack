@@ -2,9 +2,10 @@
 .SYNOPSIS
     Interactive launcher script for ESS Pre-Upgrade Health Checker
 .DESCRIPTION
-    This script provides an interactive interface for the ESS Health Checker with two modes:
+    This script provides an interactive interface for the ESS Health Checker with three options:
     1. Automated checker - runs the full automated health check process
     2. Interactive checker - allows selective instance checking with user input
+    3. Exit - exit the health checker application
 .NOTES
     Author: Zoe Lai
     Date: 09/01/2025
@@ -50,13 +51,16 @@ try {
         Write-Host "   - Prompts for ESS URL input for API health checks" -ForegroundColor Gray
         Write-Host "   - Generates targeted report for selected instances only" -ForegroundColor Gray
         Write-Host ""
+        Write-Host "3. Exit" -ForegroundColor White
+        Write-Host "   - Exit the health checker application" -ForegroundColor Gray
+        Write-Host ""
         
         do {
-            $choice = Read-Host "Enter your choice (1 or 2)"
-            if ($choice -notin @("1", "2")) {
-                Write-Host "Invalid choice. Please enter 1 or 2." -ForegroundColor Red
+            $choice = Read-Host "Enter your choice (1, 2, or 3)"
+            if ($choice -notin @("1", "2", "3")) {
+                Write-Host "Invalid choice. Please enter 1, 2, or 3." -ForegroundColor Red
             }
-        } while ($choice -notin @("1", "2"))
+        } while ($choice -notin @("1", "2", "3"))
         
         Write-Host ""
         
@@ -64,16 +68,25 @@ try {
             # Run automated checker
             Write-Host "Starting automated health checks..." -ForegroundColor Yellow
             $reportPath = Start-ESSHealthChecks
+            
+            Write-Host ""
+            Write-Host "Health check completed successfully!" -ForegroundColor Green
+            Write-Host "Report location: $reportPath" -ForegroundColor Cyan
         }
-        else {
+        elseif ($choice -eq "2") {
             # Run interactive checker
             Write-Host "Starting interactive health checks..." -ForegroundColor Yellow
             $reportPath = Start-InteractiveESSHealthChecks
+            
+            Write-Host ""
+            Write-Host "Health check completed successfully!" -ForegroundColor Green
+            Write-Host "Report location: $reportPath" -ForegroundColor Cyan
         }
-        
-        Write-Host ""
-        Write-Host "Health check completed successfully!" -ForegroundColor Green
-        Write-Host "Report location: $reportPath" -ForegroundColor Cyan
+        else {
+            # Exit option
+            Write-Host "Exiting health checker. Goodbye!" -ForegroundColor Yellow
+            exit 0
+        }
         
     } else {
         throw "Source directory not found at: $srcPath"
