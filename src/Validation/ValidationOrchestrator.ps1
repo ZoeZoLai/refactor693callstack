@@ -220,5 +220,3 @@ function Test-ESSAPIHealthCheckValidation {
     }
 }
 
-# ValidationManager instances are now created and passed through the call stack
-# No global initialization needed 
