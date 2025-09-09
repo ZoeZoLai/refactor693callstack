@@ -114,7 +114,7 @@ function Get-SystemInformation {
     .PARAMETER SystemInfoManager
         SystemInformationManager instance for system information operations
     .RETURNS
-        PSCustomObject containing system information
+        hashtable containing system information
     #>
     [CmdletBinding()]
     param(
