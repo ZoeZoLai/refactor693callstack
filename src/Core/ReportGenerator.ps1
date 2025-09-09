@@ -413,11 +413,11 @@ function New-ReportHTML {
             <!-- Executive Summary -->
             <div class="summary-stats">
                 <div class="stat-card">
-                    <div class="stat-number">$(if ($detectionResults -and $detectionResults.ESSInstances.Count -gt 0) { "Installed" } else { "Not Installed" })</div>
+                    <div class="stat-number">$(if ($detectionResults -and $detectionResults.OriginalESSInstances -and $detectionResults.OriginalESSInstances.Count -gt 0) { "Installed" } elseif ($detectionResults -and $detectionResults.ESSInstances.Count -gt 0) { "Installed" } else { "Not Installed" })</div>
                     <div class="stat-label">ESS Status</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">$(if ($detectionResults -and $detectionResults.WFEInstances.Count -gt 0) { "Installed" } else { "Not Installed" })</div>
+                    <div class="stat-number">$(if ($detectionResults -and $detectionResults.OriginalWFEInstances -and $detectionResults.OriginalWFEInstances.Count -gt 0) { "Installed" } elseif ($detectionResults -and $detectionResults.WFEInstances.Count -gt 0) { "Installed" } else { "Not Installed" })</div>
                     <div class="stat-label">WFE Status</div>
                 </div>
                 <div class="stat-card">
@@ -426,7 +426,7 @@ function New-ReportHTML {
                 </div>
                 <div class="stat-card">
                     <div class="stat-number">$passChecks/$totalChecks</div>
-                    <div class="stat-label">Checks Passed</div>
+                    <div class="stat-label">Passed Checks</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number">$failChecks</div>
@@ -690,6 +690,8 @@ function New-TargetedHealthCheckReport {
         System information hashtable
     .PARAMETER SelectedInstances
         Selected instances object containing ESS and WFE instances
+    .PARAMETER OriginalDetectionResults
+        Original detection results containing all available instances (for installation status)
     .PARAMETER ESSUrl
         ESS URL used for API health checks
     .PARAMETER Manager
@@ -709,6 +711,9 @@ function New-TargetedHealthCheckReport {
         
         [Parameter(Mandatory = $true)]
         [hashtable]$SelectedInstances,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$OriginalDetectionResults = $null,
         
         [Parameter(Mandatory = $false)]
         [string]$ESSUrl = $null,
@@ -749,12 +754,15 @@ function New-TargetedHealthCheckReport {
         
         Write-Verbose "Using output path: $OutputPath"
         
-        # Create modified detection results with only selected instances
+        # Create modified detection results with only selected instances for report content
         $selectiveDetectionResults = @{
             IISInstalled = $true  # Assume IIS is installed if we have instances
             ESSInstances = $SelectedInstances.ESSInstances
             WFEInstances = $SelectedInstances.WFEInstances
-            DeploymentType = if ($SelectedInstances.ESSInstances.Count -gt 0 -and $SelectedInstances.WFEInstances.Count -gt 0) {
+            # Use original deployment type if available, otherwise determine from selected instances
+            DeploymentType = if ($OriginalDetectionResults -and $OriginalDetectionResults.DeploymentType) {
+                $OriginalDetectionResults.DeploymentType
+            } elseif ($SelectedInstances.ESSInstances.Count -gt 0 -and $SelectedInstances.WFEInstances.Count -gt 0) {
                 "Combined"
             } elseif ($SelectedInstances.ESSInstances.Count -gt 0) {
                 "ESS Only"
@@ -766,9 +774,16 @@ function New-TargetedHealthCheckReport {
             Summary = @()
         }
         
-        # Use the existing report generation function with modified detection results
         # Add a flag to indicate this is an interactive report for different wording
         $selectiveDetectionResults.IsInteractiveReport = $true
+        
+        # For installation status in the summary, use original detection results if available
+        # This ensures the summary shows correct installation status even when only some instances are selected
+        if ($OriginalDetectionResults) {
+            $selectiveDetectionResults.OriginalESSInstances = $OriginalDetectionResults.ESSInstances
+            $selectiveDetectionResults.OriginalWFEInstances = $OriginalDetectionResults.WFEInstances
+        }
+        
         $reportPath = New-HealthCheckReport -Results $Results -SystemInfo $SystemInfo -DetectionResults $selectiveDetectionResults -Manager $Manager -OutputPath $OutputPath -ReportFileName $reportFileName
         
         Write-Host "Targeted health check report generated: $reportPath" -ForegroundColor Green

@@ -163,12 +163,12 @@ function Start-InteractiveESSHealthChecks {
         
         # Step 5: Run selective validation checks
         Write-Host "Step 5: Running selective validation checks..." -ForegroundColor Yellow
-        Start-SelectiveSystemValidation -SystemInfo $systemInfo -SelectedInstances $selectedInstances -ESSUrl $essUrl -Manager $healthCheckManager -ValidationManager $validationManager
+        Start-SelectiveSystemValidation -SystemInfo $systemInfo -SelectedInstances $selectedInstances -OriginalDetectionResults $detectionResults -ESSUrl $essUrl -Manager $healthCheckManager -ValidationManager $validationManager
         
         # Step 6: Generate targeted report
         Write-Host "Step 6: Generating targeted health check report..." -ForegroundColor Yellow
         $results = Get-HealthCheckResults -Manager $healthCheckManager
-        $reportPath = New-TargetedHealthCheckReport -Results $results -SystemInfo $systemInfo -SelectedInstances $selectedInstances -ESSUrl $essUrl -Manager $healthCheckManager
+        $reportPath = New-TargetedHealthCheckReport -Results $results -SystemInfo $systemInfo -SelectedInstances $selectedInstances -OriginalDetectionResults $detectionResults -ESSUrl $essUrl -Manager $healthCheckManager
         
         # Step 7: Display summary
         Write-Host "`n=== Interactive Health Check Summary ===" -ForegroundColor Magenta

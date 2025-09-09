@@ -82,6 +82,8 @@ refactor693callstack/
 - **Version Detection**: Extracts ESS and PayGlobal versions
 - **Database Connection**: Validates database connectivity
 - **Interactive Selection**: User can choose specific instances to check
+- **Smart Instance Display**: Clean table format showing instance details (site, path, database, tenant ID)
+- **Intelligent Validation**: Accurate detection messages that distinguish between "not installed" vs "not selected"
 
 ### ✅ API Health Checks
 - **Endpoint Validation**: Tests ESS API endpoints
@@ -98,10 +100,12 @@ refactor693callstack/
 
 ### ✅ Report Generation
 - **HTML Reports**: Comprehensive, styled HTML reports
-- **Executive Summary**: High-level status overview
+- **Executive Summary**: High-level status overview with accurate installation status
 - **Detailed Results**: Per-check results with explanations
 - **Recommendations**: Actionable upgrade guidance
 - **Targeted Reports**: Interactive mode generates reports for selected instances only
+- **Accurate Deployment Type**: Reports show actual deployment structure (Combined/ESS Only/WFE Only) regardless of selection
+- **Smart Status Display**: Installation status correctly reflects system reality, not just selected instances
 
 ## 📋 Prerequisites
 
@@ -148,11 +152,13 @@ The new interactive health checker provides a user-friendly menu to choose betwe
 1. **Launch**: Run `.\RunInteractiveHealthCheck.ps1`
 2. **Mode Selection**: Choose between automated (1) or interactive (2) mode
 3. **System Discovery**: Tool automatically collects system info and detects all ESS/WFE instances
-4. **Instance Display**: View all detected instances with:
-   - Site name
+4. **Instance Display**: View all detected instances in a clean table format with:
+   - Instance number for selection
    - Instance type (ESS or WFE)
-   - Instance alias
-   - Installation path
+   - Site name
+   - Application path
+   - Database server and name
+   - Tenant ID (truncated for readability)
 5. **Instance Selection**: Choose which instances to check:
    - Enter ESS instance numbers (e.g., `1,3` for instances 1 and 3)
    - Enter WFE instance numbers (e.g., `2` for instance 2)
@@ -359,13 +365,18 @@ Step 2: Detecting ESS/WFE installations...
 === Available ESS and WFE Instances ===
 
 ESS Instances:
-1. Site: Default Web Site, Alias: ESS, Path: C:\inetpub\wwwroot\ESS
-2. Site: ESS-Site, Alias: ESS-Dev, Path: C:\inetpub\wwwroot\ESS-Dev
-3. Site: ESS-Site, Alias: ESS-Test, Path: C:\inetpub\wwwroot\ESS-Test
+# Type Site            Path                Database                                    Tenant ID
+- ---- ----            ----                --------                                    ---------
+1 ESS  Default Web Site /Self-Service/ESS  MYOBPF3X2ZR5\SQLSERVER2019/Treetops_NZ    ba81e050...
+2 ESS  Default Web Site /Self-Service/NZ_ESS MYOBPF3X2ZR5\SQLSERVER2019/Template_NZ  ba81e050...
+3 ESS  Default Web Site /Self-Service/ESS_AU MYOBPF3X2ZR5\SQLSERVER2019/Template_AU  ba81e050...
 
 WFE Instances:
-1. Site: Default Web Site, Alias: WFE, Path: C:\inetpub\wwwroot\WFE
-2. Site: WFE-Site, Alias: WFE-Dev, Path: C:\inetpub\wwwroot\WFE-Dev
+# Type Site            Path                    Database                                    Tenant ID
+- ---- ----            ----                    --------                                    ---------
+4 WFE  Default Web Site /Self-Service/WorkflowEngine MYOBPF3X2ZR5\SQLSERVER2019/Treetops_NZ    ba81e050...
+5 WFE  Default Web Site /Self-Service/NZ_WFE  MYOBPF3X2ZR5\SQLSERVER2019/Template_NZ  ba81e050...
+6 WFE  Default Web Site /Self-Service/WFE_AU  MYOBPF3X2ZR5\SQLSERVER2019/Template_AU  ba81e050...
 
 Enter ESS instance numbers to check (comma-separated, e.g., 1,3): 1,2
 Enter WFE instance numbers to check (comma-separated, e.g., 1,2): 1
@@ -373,6 +384,9 @@ Enter ESS URL for API health check: https://ess.company.com/api/v1/healthcheck
 
 Step 3: Running validation checks on selected instances...
 [PASS] System Requirements - Memory : Sufficient memory available
+[PASS] ESS/WFE Detection - ESS Installation : Found 2 ESS installation(s)
+[INFO] ESS/WFE Detection - WFE Installation : WFE installations exist but none selected for this targeted health check
+[INFO] ESS/WFE Detection - Deployment Type : Deployment Type: Combined
 [PASS] Database Connectivity - ESS - PG Database Connection : Successfully connected
 [PASS] ESS API Health Check - Overall Status : ESS instance is healthy
 
@@ -440,6 +454,52 @@ Health Check Results:
   Info: 5
 ```
 
+## 🔧 Recent Fixes & Improvements
+
+### **Smart Validation & Reporting (v2.4)**
+
+The latest version includes significant improvements to validation accuracy and user experience:
+
+#### **🎯 Intelligent Instance Detection**
+- **Before**: When selecting only ESS instances, WFE showed "No WFE installations found on this machine" (misleading)
+- **After**: Shows "WFE installations exist but none selected for this targeted health check" (accurate)
+
+#### **📊 Correct Deployment Type Display**
+- **Before**: Selecting only ESS instances showed "ESS Only" even when WFE was installed
+- **After**: Shows actual deployment structure ("Combined") regardless of selection
+
+#### **📋 Enhanced Instance Display**
+- **Before**: Verbose, hard-to-read instance listing
+- **After**: Clean table format with all key details (site, path, database, tenant ID)
+
+#### **🔍 Accurate Report Summary**
+- **Before**: Report summary showed "Not Installed" for instances that existed but weren't selected
+- **After**: Summary correctly reflects actual system installation status
+
+#### **🛠️ Code Quality Improvements**
+- **Database Connectivity**: Refactored to eliminate code duplication
+- **Helper Functions**: Created reusable `Test-DatabaseInstanceConnectivity` function
+- **DRY Principles**: Single implementation for database connection testing
+- **Maintainability**: Cleaner, more maintainable code structure
+
+### **Example of Improved Behavior**
+
+**Scenario**: System has both ESS and WFE installed, user selects only ESS instance 3
+
+**Before (v2.3)**:
+```
+[INFO] ESS/WFE Detection - WFE Installation : No WFE installations found on this machine
+[INFO] ESS/WFE Detection - Deployment Type : Deployment Type: ESS Only
+Report Summary: WFE Status: Not Installed
+```
+
+**After (v2.4)**:
+```
+[INFO] ESS/WFE Detection - WFE Installation : WFE installations exist but none selected for this targeted health check
+[INFO] ESS/WFE Detection - Deployment Type : Deployment Type: Combined
+Report Summary: WFE Status: Installed
+```
+
 ## 🐛 Troubleshooting
 
 ### Common Issues
@@ -486,11 +546,20 @@ For issues or questions:
 
 ---
 
-**Version**: 2.3 - Interactive Health Checker with Dual Operation Modes  
+**Version**: 2.4 - Enhanced Interactive Health Checker with Smart Validation  
 **Last Updated**: January 2025  
 **Author**: Zoe Lai
 
-### 🎉 **Recent Improvements (v2.3)**
+### 🎉 **Latest Improvements (v2.4)**
+- **✅ Smart Instance Display**: Clean table format showing instance details (site, path, database, tenant ID)
+- **✅ Intelligent Validation Messages**: Accurate detection that distinguishes "not installed" vs "not selected"
+- **✅ Correct Deployment Type**: Reports show actual deployment structure regardless of instance selection
+- **✅ Accurate Installation Status**: Summary correctly reflects system reality, not just selected instances
+- **✅ Enhanced Database Connectivity**: Refactored to eliminate code duplication with reusable helper functions
+- **✅ Improved Report Accuracy**: Fixed misleading "Not Installed" status when instances exist but weren't selected
+- **✅ Better User Experience**: Clear, accurate messages that don't confuse users about system state
+
+### 🎉 **Previous Improvements (v2.3)**
 - **✅ Interactive Health Checker**: New interactive mode with user-friendly instance selection
 - **✅ Dual Operation Modes**: Choose between automated (all instances) or interactive (selected instances)
 - **✅ Instance Selection**: View and select specific ESS/WFE instances with detailed information

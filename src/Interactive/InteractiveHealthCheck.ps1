@@ -38,6 +38,9 @@ function Show-InstanceSelectionMenu {
         # Display ESS instances
         if ($DetectionResults.ESSInstances -and $DetectionResults.ESSInstances.Count -gt 0) {
             Write-Host "ESS Instances:" -ForegroundColor Yellow
+            
+            # Create table data for ESS instances
+            $essTableData = @()
             foreach ($ess in $DetectionResults.ESSInstances) {
                 $instanceInfo = @{
                     Index = $instanceCounter
@@ -50,18 +53,22 @@ function Show-InstanceSelectionMenu {
                     Instance = $ess
                 }
                 
-                Write-Host "  $instanceCounter. ESS Instance" -ForegroundColor White
-                Write-Host "     Site: $($ess.SiteName)" -ForegroundColor Gray
-                Write-Host "     Path: $($ess.ApplicationPath)" -ForegroundColor Gray
-                Write-Host "     Database: $($ess.DatabaseServer)/$($ess.DatabaseName)" -ForegroundColor Gray
-                if ($ess.TenantID) {
-                    Write-Host "     Tenant ID: $($ess.TenantID)" -ForegroundColor Gray
+                $essTableData += [PSCustomObject]@{
+                    '#' = $instanceCounter
+                    'Type' = 'ESS'
+                    'Site' = $ess.SiteName
+                    'Path' = $ess.ApplicationPath
+                    'Database' = "$($ess.DatabaseServer)/$($ess.DatabaseName)"
+                    'Tenant ID' = if ($ess.TenantID) { $ess.TenantID.Substring(0, 8) + "..." } else { "N/A" }
                 }
-                Write-Host ""
                 
                 $allInstances += $instanceInfo
                 $instanceCounter++
             }
+            
+            # Display ESS instances in table format
+            $essTableData | Format-Table -AutoSize | Out-String | ForEach-Object { Write-Host $_ -ForegroundColor White }
+            Write-Host ""
         } else {
             Write-Host "No ESS instances found." -ForegroundColor Yellow
             Write-Host ""
@@ -70,6 +77,9 @@ function Show-InstanceSelectionMenu {
         # Display WFE instances
         if ($DetectionResults.WFEInstances -and $DetectionResults.WFEInstances.Count -gt 0) {
             Write-Host "WFE Instances:" -ForegroundColor Yellow
+            
+            # Create table data for WFE instances
+            $wfeTableData = @()
             foreach ($wfe in $DetectionResults.WFEInstances) {
                 $instanceInfo = @{
                     Index = $instanceCounter
@@ -82,18 +92,22 @@ function Show-InstanceSelectionMenu {
                     Instance = $wfe
                 }
                 
-                Write-Host "  $instanceCounter. WFE Instance" -ForegroundColor White
-                Write-Host "     Site: $($wfe.SiteName)" -ForegroundColor Gray
-                Write-Host "     Path: $($wfe.ApplicationPath)" -ForegroundColor Gray
-                Write-Host "     Database: $($wfe.DatabaseServer)/$($wfe.DatabaseName)" -ForegroundColor Gray
-                if ($wfe.TenantID) {
-                    Write-Host "     Tenant ID: $($wfe.TenantID)" -ForegroundColor Gray
+                $wfeTableData += [PSCustomObject]@{
+                    '#' = $instanceCounter
+                    'Type' = 'WFE'
+                    'Site' = $wfe.SiteName
+                    'Path' = $wfe.ApplicationPath
+                    'Database' = "$($wfe.DatabaseServer)/$($wfe.DatabaseName)"
+                    'Tenant ID' = if ($wfe.TenantID) { $wfe.TenantID.Substring(0, 8) + "..." } else { "N/A" }
                 }
-                Write-Host ""
                 
                 $allInstances += $instanceInfo
                 $instanceCounter++
             }
+            
+            # Display WFE instances in table format
+            $wfeTableData | Format-Table -AutoSize | Out-String | ForEach-Object { Write-Host $_ -ForegroundColor White }
+            Write-Host ""
         } else {
             Write-Host "No WFE instances found." -ForegroundColor Yellow
             Write-Host ""
@@ -255,6 +269,8 @@ function Start-SelectiveSystemValidation {
         System information object for validation
     .PARAMETER SelectedInstances
         Selected instances object containing ESS and WFE instances to validate
+    .PARAMETER OriginalDetectionResults
+        Original detection results containing all available instances (for proper validation messages)
     .PARAMETER ESSUrl
         ESS URL for API health checks
     .PARAMETER Manager
@@ -271,6 +287,9 @@ function Start-SelectiveSystemValidation {
         
         [Parameter(Mandatory = $true)]
         [hashtable]$SelectedInstances,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$OriginalDetectionResults = $null,
         
         [Parameter(Mandatory = $false)]
         [string]$ESSUrl = $null,
@@ -290,7 +309,10 @@ function Start-SelectiveSystemValidation {
             IISInstalled = $true  # Assume IIS is installed if we have instances
             ESSInstances = $SelectedInstances.ESSInstances
             WFEInstances = $SelectedInstances.WFEInstances
-            DeploymentType = if ($SelectedInstances.ESSInstances.Count -gt 0 -and $SelectedInstances.WFEInstances.Count -gt 0) {
+            # Use original deployment type if available, otherwise determine from selected instances
+            DeploymentType = if ($OriginalDetectionResults -and $OriginalDetectionResults.DeploymentType) {
+                $OriginalDetectionResults.DeploymentType
+            } elseif ($SelectedInstances.ESSInstances.Count -gt 0 -and $SelectedInstances.WFEInstances.Count -gt 0) {
                 "Combined"
             } elseif ($SelectedInstances.ESSInstances.Count -gt 0) {
                 "ESS Only"
@@ -302,6 +324,13 @@ function Start-SelectiveSystemValidation {
             Summary = @()
         }
         
+        # Add original detection results for proper validation messages
+        if ($OriginalDetectionResults) {
+            $selectiveDetectionResults.IsInteractiveReport = $true
+            $selectiveDetectionResults.OriginalESSInstances = $OriginalDetectionResults.ESSInstances
+            $selectiveDetectionResults.OriginalWFEInstances = $OriginalDetectionResults.WFEInstances
+        }
+        
         # Run basic system validation (always needed)
         if ($SystemInfo -and $SystemInfo.Count -gt 0) {
             Test-SystemRequirements -SystemInfo $SystemInfo -Configuration $null -Manager $Manager
@@ -310,11 +339,16 @@ function Start-SelectiveSystemValidation {
             Test-SecurityPermissions -SystemInfo $SystemInfo -Manager $Manager
         }
         
+        # Run common ESS/WFE validations (only once regardless of selection)
+        if ($SelectedInstances.ESSInstances.Count -gt 0 -or $SelectedInstances.WFEInstances.Count -gt 0) {
+            Write-Host "Running ESS/WFE detection and database connectivity checks..." -ForegroundColor Cyan
+            Test-ESSWFEDetection -DetectionResults $selectiveDetectionResults -Manager $Manager
+            Test-DatabaseConnectivity -DetectionResults $selectiveDetectionResults -Manager $Manager
+        }
+        
         # Run ESS-specific validations for selected ESS instances
         if ($SelectedInstances.ESSInstances.Count -gt 0) {
             Write-Host "Running ESS-specific validations..." -ForegroundColor Cyan
-            Test-ESSWFEDetection -DetectionResults $selectiveDetectionResults -Manager $Manager
-            Test-DatabaseConnectivity -DetectionResults $selectiveDetectionResults -Manager $Manager
             Test-WebConfigEncryptionValidation -DetectionResults $selectiveDetectionResults -Manager $Manager
             Test-ESSVersionValidation -DetectionResults $selectiveDetectionResults -Configuration $null -Manager $Manager
             Test-ESSHTTPSValidation -DetectionResults $selectiveDetectionResults -Manager $Manager
@@ -323,8 +357,7 @@ function Start-SelectiveSystemValidation {
         # Run WFE-specific validations for selected WFE instances
         if ($SelectedInstances.WFEInstances.Count -gt 0) {
             Write-Host "Running WFE-specific validations..." -ForegroundColor Cyan
-            Test-ESSWFEDetection -DetectionResults $selectiveDetectionResults -Manager $Manager
-            Test-DatabaseConnectivity -DetectionResults $selectiveDetectionResults -Manager $Manager
+            # WFE-specific validations would go here if any exist
         }
         
         # Run ESS API health check if URL provided

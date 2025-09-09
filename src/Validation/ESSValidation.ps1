@@ -45,14 +45,24 @@ function Test-ESSWFEDetection {
         if ($DetectionResults.ESSInstances.Count -gt 0) {
             Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "ESS Installation" -Status "PASS" -Message "Found $($DetectionResults.ESSInstances.Count) ESS installation(s)" -Manager $Manager
         } else {
-            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "ESS Installation" -Status "INFO" -Message "No ESS installations found on this machine" -Manager $Manager
+            # Check if this is an interactive report with original detection results available
+            if ($DetectionResults.IsInteractiveReport -and $DetectionResults.OriginalESSInstances -and $DetectionResults.OriginalESSInstances.Count -gt 0) {
+                Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "ESS Installation" -Status "INFO" -Message "ESS installations exist but none selected for this targeted health check" -Manager $Manager
+            } else {
+                Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "ESS Installation" -Status "INFO" -Message "No ESS installations found on this machine" -Manager $Manager
+            }
         }
         
         # Add WFE installation checks
         if ($DetectionResults.WFEInstances.Count -gt 0) {
             Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "WFE Installation" -Status "PASS" -Message "Found $($DetectionResults.WFEInstances.Count) WFE installation(s)" -Manager $Manager
         } else {
-            Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "WFE Installation" -Status "INFO" -Message "No WFE installations found on this machine" -Manager $Manager
+            # Check if this is an interactive report with original detection results available
+            if ($DetectionResults.IsInteractiveReport -and $DetectionResults.OriginalWFEInstances -and $DetectionResults.OriginalWFEInstances.Count -gt 0) {
+                Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "WFE Installation" -Status "INFO" -Message "WFE installations exist but none selected for this targeted health check" -Manager $Manager
+            } else {
+                Add-HealthCheckResult -Category "ESS/WFE Detection" -Check "WFE Installation" -Status "INFO" -Message "No WFE installations found on this machine" -Manager $Manager
+            }
         }
         
         # Add deployment type check
