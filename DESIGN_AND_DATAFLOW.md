@@ -518,7 +518,7 @@ $DetectionResults = @{
 ---
 
 **Version**: 2.4 - Enhanced Interactive Health Checker with Smart Validation  
-**Last Updated**: January 2025  
+**Last Updated**: September 2025  
 **Author**: Zoe Lai
 
 This documentation provides a comprehensive overview of the ESS Pre-Upgrade Health Checker's design, architecture, and data flow. The system follows modern software engineering principles with clean separation of concerns, dependency injection, and maintainable code structure.
