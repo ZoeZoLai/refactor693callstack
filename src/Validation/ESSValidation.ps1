@@ -118,14 +118,14 @@ function Test-WebConfigEncryptionValidation {
             if ($isEncrypted) {
                 Add-HealthCheckResult -Category "Web.Config Encryption" -Check "SingleSignOn Encryption" -Status "FAIL" -Message "ESS site '$siteIdentifier' uses SingleSignOn authentication and web.config is encrypted. Ensure decrypt first before upgrade." -Manager $Manager
             } else {
-                Add-HealthCheckResult -Category "Web.Config Encryption" -Check "SingleSignOn Encryption" -Status "PASS" -Message "ESS site '$siteIdentifier' uses SingleSignOn authentication and web.config is not encrypted - ready for upgrade" -Manager $Manager
+                Add-HealthCheckResult -Category "Web.Config Encryption" -Check "SingleSignOn Encryption" -Status "PASS" -Message "ESS site '$siteIdentifier' uses SingleSignOn authentication and web.config is not encrypted - ready for upgrade." -Manager $Manager
             }
         } else {
             # For non-SingleSignOn authentication modes, encryption should be false
             if ($isEncrypted) {
-                Add-HealthCheckResult -Category "Web.Config Encryption" -Check "Authentication Encryption" -Status "INFO" -Message "ESS site '$siteIdentifier' uses $authMode authentication and web.config is encrypted" -Manager $Manager
+                Add-HealthCheckResult -Category "Web.Config Encryption" -Check "Authentication Encryption" -Status "WARNING" -Message "ESS site '$siteIdentifier' uses $authMode authentication and web.config is encrypted. Please review before upgrade." -Manager $Manager
             } else {
-                Add-HealthCheckResult -Category "Web.Config Encryption" -Check "Authentication Encryption" -Status "PASS" -Message "ESS site '$siteIdentifier' uses $authMode authentication and web.config is not encrypted" -Manager $Manager
+                Add-HealthCheckResult -Category "Web.Config Encryption" -Check "Authentication Encryption" -Status "PASS" -Message "ESS site '$siteIdentifier' uses $authMode authentication and web.config is not encrypted." -Manager $Manager
             }
         }
     }
