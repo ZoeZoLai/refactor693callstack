@@ -269,9 +269,8 @@ try {
     }
     
     Write-Host ""
-    Write-Host "Run Again Options:" -ForegroundColor Yellow
-    Write-Host "   - Run automated mode: ESSHealthChecker.exe" -ForegroundColor White
-    Write-Host "   - Run interactive mode: ESSHealthChecker.exe -Interactive" -ForegroundColor White
+    Write-Host "To run again:" -ForegroundColor Yellow
+    Write-Host "   Run ESSHealthChecker.exe as administrator and select your option" -ForegroundColor White
     Write-Host ""
     
     # Enhanced pause mechanism with multiple fallbacks

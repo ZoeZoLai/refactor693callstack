@@ -82,8 +82,13 @@ cd build
 ### ESSHealthChecker.exe
 - **Purpose**: Standalone executable for distribution
 - **Size**: ~15-20 MB
-- **Usage**: Double-click to run, or run from command line
+- **Usage**: Right-click to run as administrator, or run from command line
 - **Dependencies**: Windows PowerShell (built into Windows)
+
+**Usage:**
+- **Right-click** the executable to run as administrator
+- **Menu-driven interface** - simply choose 1, 2, or 3
+- **No command-line knowledge required**
 
 ## Usage Examples
 
