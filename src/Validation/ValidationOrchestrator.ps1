@@ -158,14 +158,19 @@ function Test-ESSAPIHealthCheckValidation {
     try {
         Write-Verbose "Testing ESS API health check validation..."
         
-        # Import the API health check functions
-        $apiModulePath = Join-Path $PSScriptRoot "..\Detection\ESSHealthCheckAPI.ps1"
-        if (Test-Path $apiModulePath) {
-            . $apiModulePath
-        } else {
-            Add-HealthCheckResult -Category "ESS API Health Check" -Check "Module Loading" -Status "FAIL" -Message "ESSHealthCheckAPI.ps1 module not found at: $apiModulePath" -Manager $Manager
-            return
+        # Import the API health check functions (only needed in non-bundled context)
+        # Check if we need to import modules based on whether functions are already available
+        if (-not (Get-Command -Name "Test-ESSAPIHealth" -ErrorAction SilentlyContinue)) {
+            # We're in source script mode, need to import the module
+            $apiModulePath = Join-Path $PSScriptRoot "..\Detection\ESSHealthCheckAPI.ps1"
+            if (Test-Path $apiModulePath) {
+                . $apiModulePath
+            } else {
+                Add-HealthCheckResult -Category "ESS API Health Check" -Check "Module Loading" -Status "FAIL" -Message "ESSHealthCheckAPI.ps1 module not found at: $apiModulePath" -Manager $Manager
+                return
+            }
         }
+        # In bundled executable, all modules are already loaded, so skip import
         
         if (-not $DetectionResults -or -not $DetectionResults.ESSInstances) {
             Add-HealthCheckResult -Category "ESS API Health Check" -Check "ESS Detection" -Status "WARNING" -Message "No ESS instances detected for API health check validation" -Manager $Manager

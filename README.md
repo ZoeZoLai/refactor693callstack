@@ -1,6 +1,6 @@
 # ESS Pre-Upgrade Health Checker
 
-A comprehensive PowerShell-based health checking tool for MYOB PayGlobal ESS (Employee Self Service) systems before upgrade operations.
+A comprehensive PowerShell-based health checking tool for MYOB PayGlobal ESS (Employee Self Service) systems before upgrade operations. Available as both PowerShell scripts and a **standalone executable** for easy deployment.
 
 ## 🎯 Overview
 
@@ -29,8 +29,16 @@ This separation ensures each phase can be tested independently and makes the cod
 
 ```
 refactor693callstack/
-├── Reports/                # Generated HTML reports (user-accessible)
-├── src/                    # Source code (developers only)
+├── build/                 # Build scripts and outputs
+│   ├── Build-BundledScript.ps1  # Creates single PS1 file (240 KB)
+│   ├── Build-Executable.ps1     # Complete build automation
+│   ├── Install-Requirements.ps1 # Build dependency installer
+│   ├── BUILD.md               # Build documentation
+│   └── output/               # Build outputs (git-ignored)
+│       ├── ESSHealthChecker-Complete.ps1 # Bundled script
+│       └── ESSHealthChecker.exe # Final executable
+├── Reports/                # Generated HTML reports (auto-created)
+├── src/                    # Source PowerShell modules
 │   ├── Core/              # Foundation components
 │   │   ├── Config.ps1     # Configuration management
 │   │   ├── HealthCheckCore.ps1 # Result management & core utilities
@@ -58,13 +66,19 @@ refactor693callstack/
 │   │   └── HelperFunctions.ps1 # Common helper functions
 │   ├── Main.ps1           # Main orchestration script
 │   └── tests/             # Test files
-├── RunHealthCheck.ps1     # Legacy automated launcher script
-├── RunInteractiveHealthCheck.ps1 # New interactive launcher script
-├── README.md              # This documentation
-└── .gitignore             # Git ignore rules
+├── RunHealthCheck.ps1             # Original automated launcher
+├── RunInteractiveHealthCheck.ps1  # Original interactive launcher
+├── RUNBOOK_BUILD_PROCESS.md       # Build process documentation
+├── README.md                      # This documentation
+└── .gitignore                     # Git ignore rules
 ```
 
 ## 🚀 Features
+
+### ✅ **Deployment Options**
+- **PowerShell Scripts**: Traditional multi-file PowerShell execution
+- **Standalone Executable**: Single `.exe` file with all dependencies embedded
+- **Portable Deployment**: Copy one file to any Windows machine and run
 
 ### ✅ **Dual Operation Modes**
 - **Automated Mode**: Complete system-wide health check of all detected instances
@@ -111,15 +125,41 @@ refactor693callstack/
 
 - **PowerShell 5.1+** or **PowerShell Core 6+**
 - **Windows Server 2016+** or **Windows 10+**
-- **Administrator privileges** (for IIS and system information access)
+- **Administrator privileges** (recommended for full IIS and system information access)
 - **IIS Management Tools** (for IIS configuration access)
 - **SQL Server Management Tools** (for database connectivity)
 
-## 🛠️ Installation
+## 🛠️ Installation & Deployment
+
+### Option 1: Standalone Executable (Recommended)
+
+**Single File Deployment** - Copy one file to any Windows machine:
+
+1. **Download** or build `build\output\ESSHealthChecker.exe`
+2. **Copy** to target machine (no other files needed)
+3. **Run as Administrator** (recommended for full functionality)
+
+```cmd
+# Copy executable to target machine
+copy build\output\ESSHealthChecker.exe C:\Tools\
+
+# Run the health checker (double-click or command line)
+C:\Tools\ESSHealthChecker.exe
+```
+
+**Executable Features:**
+- ✅ **Zero Dependencies**: No PowerShell scripts or folders needed
+- ✅ **Portable**: Works on any Windows machine with PowerShell
+- ✅ **Self-Contained**: All 17 modules embedded in single file
+- ✅ **Auto-Creates Reports**: Generates `Reports/` folder automatically
+
+### Option 2: PowerShell Scripts
+
+**Multi-File Development Mode** - For development and customization:
 
 1. **Clone or Download** the project to your local machine
 2. **Navigate** to the project directory
-3. **Run as Administrator** for full functionality
+3. **Run as Administrator** (recommended for full functionality)
 
 ```powershell
 # Navigate to project directory
@@ -131,9 +171,30 @@ cd C:\path\to\refactor693callstack
 
 ## 📖 Usage
 
-### **Interactive Mode (Recommended)**
+### **Executable Usage (Recommended)**
 
-The new interactive health checker provides a user-friendly menu to choose between automated and interactive modes:
+The standalone executable provides the same functionality as PowerShell scripts but with zero deployment complexity:
+
+```cmd
+# Interactive menu (default behavior)
+.\build\output\ESSHealthChecker.exe
+
+# Direct to interactive mode
+.\build\output\ESSHealthChecker.exe -Interactive
+
+# Automated mode without prompts (for scripts)
+.\build\output\ESSHealthChecker.exe -NoConsole
+```
+
+**Executable Benefits:**
+- ✅ **No PowerShell knowledge required** - just double-click to run
+- ✅ **Universal compatibility** - works on any Windows machine
+- ✅ **Self-contained** - creates Reports folder automatically
+- ✅ **Enterprise ready** - single file for easy distribution
+
+### **PowerShell Script Usage (Development)**
+
+For development or when you need to modify the source code:
 
 ```powershell
 # Launch interactive health checker
@@ -500,12 +561,61 @@ Report Summary: WFE Status: Not Installed
 Report Summary: WFE Status: Installed
 ```
 
+## 🔨 Building the Executable
+
+To create your own standalone executable from the PowerShell source code:
+
+### Prerequisites
+- **PS2EXE Module**: PowerShell to executable converter
+- **PowerShell 5.1+**: Build environment
+- **Administrator Privileges**: Recommended for full functionality testing
+
+### Quick Build
+```powershell
+# Navigate to build directory
+cd build
+
+# Run automated build process (installs PS2EXE if needed)
+.\Build-Executable.ps1 -InstallPS2EXE
+
+# Output: build\output\ESSHealthChecker.exe
+```
+
+### Manual Build Process
+```powershell
+# Navigate to build directory
+cd build
+
+# Step 1: Bundle all modules into single script
+.\Build-BundledScript.ps1
+
+# Step 2: Convert to executable
+Import-Module ps2exe
+ps2exe -inputFile "output\ESSHealthChecker-Complete.ps1" `
+       -outputFile "output\ESSHealthChecker.exe" `
+       -verbose `
+       -title "ESS Pre-Upgrade Health Checker" `
+       -company "MYOB"
+
+# Step 3: Test the executable
+.\output\ESSHealthChecker.exe
+```
+
+### Build Outputs
+- **output\ESSHealthChecker-Complete.ps1**: Bundled PowerShell script (~240 KB)
+- **output\ESSHealthChecker.exe**: Standalone executable (~2-4 MB)
+
+### Build Documentation
+For detailed build instructions, troubleshooting, and deployment guidance, see:
+- **[build/BUILD.md](build/BUILD.md)**: Complete build instructions and troubleshooting
+- **[RUNBOOK_BUILD_PROCESS.md](RUNBOOK_BUILD_PROCESS.md)**: Original build runbook
+
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
 1. **"Insufficient permissions"**
-   - Run PowerShell as Administrator
+   - Run PowerShell as Administrator (for full functionality)
    - Ensure IIS Management Tools are installed
 
 2. **"IIS modules not found"**
@@ -521,6 +631,16 @@ Report Summary: WFE Status: Installed
    - Verify ESS application is running
    - Check IIS application pool status
    - Validate API endpoint URLs
+
+5. **"Unknown Publisher" warning (Executable)**
+   - This is normal for unsigned executables
+   - Click "More info" → "Run anyway"
+   - Safe to run - contains only your PowerShell code
+
+6. **"Cannot bind argument to parameter 'Path'" (Executable)**
+   - Rebuild executable with latest fixes
+   - Ensure using updated build scripts
+   - Run `cd build && .\Build-Executable.ps1` to rebuild
 
 ## 🤝 Contributing
 

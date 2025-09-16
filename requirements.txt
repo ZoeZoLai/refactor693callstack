@@ -1,0 +1,201 @@
+# ESS Pre-Upgrade Health Checker - Requirements File
+# Version: 3.0
+# Last Updated: September 12, 2025
+
+# ============================================================================
+# POWERSHELL MODULES
+# ============================================================================
+
+# Core PowerShell Modules (Built-in with Windows)
+# PowerShell 5.1+ or PowerShell Core 7+
+
+# IIS Management Modules (Required for ESS/WFE detection)
+WebAdministration      # IIS WebAdministration module for site management
+IISAdministration      # IIS Administration module for configuration
+
+# SQL Server Modules (Optional - for enhanced SQL connectivity)
+# SqlServer            # SQL Server PowerShell module (optional enhancement)
+
+# Build Dependencies (Development Only)
+ps2exe                 # PowerShell to EXE converter (Install-Module ps2exe)
+
+# ============================================================================
+# SYSTEM REQUIREMENTS
+# ============================================================================
+
+# Operating System
+# - Windows Server 2016+ OR
+# - Windows Server 2019+ OR  
+# - Windows Server 2022+ OR
+# - Windows 10+ OR
+# - Windows 11+
+
+# PowerShell Runtime
+# - Windows PowerShell 5.1+ (pre-installed on most Windows systems) OR
+# - PowerShell Core 7+ (cross-platform PowerShell)
+
+# .NET Framework
+# - .NET Framework 4.8+ (for Windows PowerShell compatibility)
+# - .NET 6+ (for PowerShell Core)
+
+# ============================================================================
+# WINDOWS FEATURES & ROLES
+# ============================================================================
+
+# Required Features (Target Machines)
+# - IIS Web Server Role (if checking IIS systems)
+# - IIS Management Tools (for configuration access)
+# - .NET Framework 4.8+ Advanced Services
+
+# Optional Features (Enhanced Functionality)
+# - SQL Server Management Tools (for database validation)
+# - Windows Management Framework 5.1+ (for older systems)
+
+# ============================================================================
+# PERMISSIONS & PRIVILEGES
+# ============================================================================
+
+# Required Privileges
+# - Administrator rights (for system information collection)
+# - IIS configuration access (for ESS/WFE detection)
+# - Registry read access (for software detection)
+# - File system access (for configuration file parsing)
+
+# Optional Privileges (Enhanced Checks)
+# - SQL Server database access (for connectivity validation)
+# - Network access (for API health checks)
+
+# ============================================================================
+# HARDWARE REQUIREMENTS
+# ============================================================================
+
+# Minimum System Requirements (Target Machines)
+# - CPU: 2+ cores, 2.0 GHz+
+# - RAM: 4 GB+ (8 GB+ recommended)
+# - Disk: 10 GB+ free space
+# - Network: TCP/IP connectivity
+
+# Development/Build Environment
+# - CPU: 4+ cores, 2.5 GHz+
+# - RAM: 8 GB+ (16 GB+ recommended)
+# - Disk: 20 GB+ free space
+# - Network: Internet access (for module downloads)
+
+# ============================================================================
+# EXTERNAL DEPENDENCIES
+# ============================================================================
+
+# .NET Assemblies (Automatically Available)
+# - System.Collections.ArrayList
+# - System.Net.WebRequest
+# - System.Management.Automation
+# - System.Security.Principal
+# - System.Environment
+
+# Web Request Dependencies
+# - Invoke-WebRequest cmdlet (built-in)
+# - SSL/TLS support for HTTPS endpoints
+# - Certificate validation (can be bypassed for localhost)
+
+# ============================================================================
+# OPTIONAL ENHANCEMENTS
+# ============================================================================
+
+# Code Signing (Production Deployment)
+# - Code signing certificate ($200-400/year)
+# - SignTool.exe (Windows SDK)
+
+# Version Control (Development)
+# - Git for Windows
+# - Visual Studio Code with PowerShell extension
+# - PowerShell ISE (legacy)
+
+# ============================================================================
+# INSTALLATION COMMANDS
+# ============================================================================
+
+# PowerShell Module Installation (Run as Administrator)
+# Install-Module ps2exe -Force -Scope CurrentUser
+# Install-Module SqlServer -Force -Scope CurrentUser  # Optional
+
+# Windows Feature Installation (Run as Administrator) 
+# Enable-WindowsOptionalFeature -Online -FeatureName IIS-WebServerRole
+# Enable-WindowsOptionalFeature -Online -FeatureName IIS-WebServer
+# Enable-WindowsOptionalFeature -Online -FeatureName IIS-ManagementConsole
+
+# ============================================================================
+# COMPATIBILITY MATRIX
+# ============================================================================
+
+# Tested Platforms:
+# ✅ Windows Server 2016 + PowerShell 5.1
+# ✅ Windows Server 2019 + PowerShell 5.1
+# ✅ Windows Server 2022 + PowerShell 5.1
+# ✅ Windows 10 + PowerShell 5.1
+# ✅ Windows 11 + PowerShell 5.1
+# ✅ Windows Server 2019 + PowerShell Core 7.x
+# ✅ Windows Server 2022 + PowerShell Core 7.x
+
+# Known Limitations:
+# ❌ PowerShell Core on Linux (IIS modules not available)
+# ❌ PowerShell Core on macOS (Windows-specific features)
+# ⚠️ Windows Server 2012 R2 (limited testing, may work with updates)
+
+# ============================================================================
+# DEPLOYMENT SCENARIOS
+# ============================================================================
+
+# Scenario 1: Standalone Executable Deployment
+# Requirements: Target machine with PowerShell 5.1+, Administrator rights
+# Files Needed: ESSHealthChecker.exe (single file)
+# Dependencies: None (all embedded)
+
+# Scenario 2: PowerShell Script Deployment  
+# Requirements: Source files, PowerShell execution policy set
+# Files Needed: Complete src/ folder structure + launcher scripts
+# Dependencies: All modules must be available
+
+# Scenario 3: Development Environment
+# Requirements: All build tools, PS2EXE module, Git
+# Files Needed: Complete repository
+# Dependencies: Development tools + runtime requirements
+
+# ============================================================================
+# TROUBLESHOOTING DEPENDENCIES
+# ============================================================================
+
+# Common Missing Dependencies:
+# 1. IIS Management Tools
+#    Solution: Install-WindowsFeature -Name Web-Mgmt-Tools
+#
+# 2. PowerShell Execution Policy
+#    Solution: Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+#
+# 3. PS2EXE Module (Build Only)
+#    Solution: Install-Module ps2exe -Force -Scope CurrentUser
+#
+# 4. Administrator Rights
+#    Solution: Run PowerShell as Administrator
+#
+# 5. .NET Framework Version
+#    Solution: Install .NET Framework 4.8+ from Microsoft
+
+# ============================================================================
+# VERSION HISTORY
+# ============================================================================
+
+# v3.0 - September 2025
+# - Added standalone executable support
+# - Enhanced PowerShell module requirements
+# - Added build dependency documentation
+# - Comprehensive compatibility matrix
+
+# v2.2 - August 2025  
+# - Call stack principles implementation
+# - Dependency injection architecture
+# - Eliminated global variables
+
+# v2.1 - July 2025
+# - Interactive mode functionality
+# - Enhanced validation modules
+# - Improved error handling

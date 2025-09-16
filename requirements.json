@@ -1,0 +1,248 @@
+{
+  "name": "ESS Pre-Upgrade Health Checker",
+  "version": "3.0.0",
+  "description": "Requirements specification for ESS Health Checker deployment and development",
+  "lastUpdated": "2025-09-12",
+  
+  "runtime": {
+    "powershell": {
+      "minimum": "5.1",
+      "recommended": "7.x",
+      "editions": ["Desktop", "Core"]
+    },
+    "dotnet": {
+      "framework": "4.8+",
+      "core": "6.0+"
+    },
+    "operatingSystems": [
+      {
+        "name": "Windows Server 2016",
+        "supported": true,
+        "notes": "Minimum supported version"
+      },
+      {
+        "name": "Windows Server 2019",
+        "supported": true,
+        "notes": "Fully tested and recommended"
+      },
+      {
+        "name": "Windows Server 2022",
+        "supported": true,
+        "notes": "Fully tested and recommended"
+      },
+      {
+        "name": "Windows 10",
+        "supported": true,
+        "notes": "Build 1809 or later recommended"
+      },
+      {
+        "name": "Windows 11",
+        "supported": true,
+        "notes": "Fully supported"
+      }
+    ]
+  },
+  
+  "modules": {
+    "required": [
+      {
+        "name": "WebAdministration",
+        "version": "1.0.0.0+",
+        "source": "Windows Feature",
+        "description": "IIS WebAdministration module for site management",
+        "installation": "Enable-WindowsOptionalFeature -Online -FeatureName IIS-ManagementConsole"
+      },
+      {
+        "name": "IISAdministration",
+        "version": "1.1.0.0+", 
+        "source": "Windows Feature",
+        "description": "IIS Administration module for configuration",
+        "installation": "Enable-WindowsOptionalFeature -Online -FeatureName IIS-ManagementConsole"
+      }
+    ],
+    "build": [
+      {
+        "name": "ps2exe",
+        "version": "latest",
+        "source": "PowerShell Gallery",
+        "description": "PowerShell to executable converter",
+        "installation": "Install-Module ps2exe -Force -Scope CurrentUser"
+      }
+    ],
+    "optional": [
+      {
+        "name": "SqlServer",
+        "version": "latest",
+        "source": "PowerShell Gallery", 
+        "description": "Enhanced SQL Server connectivity",
+        "installation": "Install-Module SqlServer -Force -Scope CurrentUser"
+      }
+    ]
+  },
+  
+  "windowsFeatures": {
+    "required": [
+      {
+        "name": "IIS-WebServerRole",
+        "displayName": "IIS Web Server Role",
+        "description": "Core IIS web server functionality",
+        "installation": "Enable-WindowsOptionalFeature -Online -FeatureName IIS-WebServerRole"
+      },
+      {
+        "name": "IIS-ManagementConsole",
+        "displayName": "IIS Management Console",
+        "description": "IIS management tools and console",
+        "installation": "Enable-WindowsOptionalFeature -Online -FeatureName IIS-ManagementConsole"
+      }
+    ],
+    "recommended": [
+      {
+        "name": "IIS-WebServer",
+        "displayName": "IIS Web Server",
+        "description": "Full IIS web server components",
+        "installation": "Enable-WindowsOptionalFeature -Online -FeatureName IIS-WebServer"
+      }
+    ]
+  },
+  
+  "permissions": {
+    "required": [
+      {
+        "name": "Administrator",
+        "description": "Administrator privileges for system information collection",
+        "scope": "Local machine"
+      },
+      {
+        "name": "IIS Configuration Access",
+        "description": "Read access to IIS configuration",
+        "scope": "IIS Management"
+      },
+      {
+        "name": "Registry Read",
+        "description": "Registry read access for software detection",
+        "scope": "System registry"
+      }
+    ],
+    "optional": [
+      {
+        "name": "SQL Server Access",
+        "description": "Database connectivity validation",
+        "scope": "SQL Server instances"
+      }
+    ]
+  },
+  
+  "hardware": {
+    "minimum": {
+      "cpu": {
+        "cores": 2,
+        "speed": "2.0 GHz"
+      },
+      "memory": "4 GB",
+      "storage": "10 GB free space",
+      "network": "TCP/IP connectivity"
+    },
+    "recommended": {
+      "cpu": {
+        "cores": 4,
+        "speed": "2.5 GHz"
+      },
+      "memory": "8 GB",
+      "storage": "20 GB free space", 
+      "network": "Internet access for module downloads"
+    }
+  },
+  
+  "deployment": {
+    "scenarios": [
+      {
+        "name": "Standalone Executable",
+        "description": "Single EXE file deployment",
+        "files": ["ESSHealthChecker.exe"],
+        "dependencies": "None (all embedded)",
+        "requirements": ["PowerShell 5.1+", "Administrator rights"]
+      },
+      {
+        "name": "PowerShell Scripts",
+        "description": "Source file deployment",
+        "files": ["Complete src/ folder", "Launcher scripts"],
+        "dependencies": "All modules available",
+        "requirements": ["Source files", "Execution policy set"]
+      },
+      {
+        "name": "Development Environment",
+        "description": "Full development setup",
+        "files": ["Complete repository"],
+        "dependencies": "Development tools + runtime requirements",
+        "requirements": ["Build tools", "PS2EXE module", "Git"]
+      }
+    ]
+  },
+  
+  "verification": {
+    "commands": [
+      {
+        "description": "Check PowerShell version",
+        "command": "$PSVersionTable.PSVersion",
+        "expectedOutput": "5.1+ or 7.x+"
+      },
+      {
+        "description": "Check IIS modules",
+        "command": "Get-Module -ListAvailable WebAdministration,IISAdministration",
+        "expectedOutput": "Both modules available"
+      },
+      {
+        "description": "Check administrator rights",
+        "command": "([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)",
+        "expectedOutput": "True"
+      },
+      {
+        "description": "Check execution policy",
+        "command": "Get-ExecutionPolicy",
+        "expectedOutput": "RemoteSigned, Unrestricted, or Bypass"
+      }
+    ]
+  },
+  
+  "troubleshooting": {
+    "common_issues": [
+      {
+        "issue": "IIS modules not found",
+        "solution": "Install IIS Management Tools",
+        "command": "Enable-WindowsOptionalFeature -Online -FeatureName IIS-ManagementConsole"
+      },
+      {
+        "issue": "Execution policy prevents scripts",
+        "solution": "Set execution policy",
+        "command": "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser"
+      },
+      {
+        "issue": "PS2EXE module missing", 
+        "solution": "Install PS2EXE module",
+        "command": "Install-Module ps2exe -Force -Scope CurrentUser"
+      },
+      {
+        "issue": "Insufficient permissions",
+        "solution": "Run as Administrator",
+        "command": "Right-click PowerShell -> Run as Administrator"
+      }
+    ]
+  },
+  
+  "compatibility": {
+    "tested_configurations": [
+      "Windows Server 2016 + PowerShell 5.1",
+      "Windows Server 2019 + PowerShell 5.1",
+      "Windows Server 2022 + PowerShell 5.1", 
+      "Windows 10 + PowerShell 5.1",
+      "Windows 11 + PowerShell 5.1",
+      "Windows Server 2019 + PowerShell Core 7.x",
+      "Windows Server 2022 + PowerShell Core 7.x"
+    ],
+    "known_limitations": [
+      "PowerShell Core on Linux: IIS modules not available",
+      "PowerShell Core on macOS: Windows-specific features not available",
+      "Windows Server 2012 R2: Limited testing, may work with updates"
+    ]
+  }
+}

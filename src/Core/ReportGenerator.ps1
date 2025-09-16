@@ -54,9 +54,22 @@ function New-HealthCheckReport {
         
         # Determine output path with fallback to default
         if (-not $OutputPath) {
-            # Use root-level Reports folder (two levels up from src/Core)
-            $rootPath = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-            $OutputPath = Join-Path $rootPath "Reports"
+            # Try to determine context and set appropriate path
+            if ($PSScriptRoot -and (Test-Path $PSScriptRoot)) {
+                # Source script mode - use root-level Reports folder (two levels up from src/Core)
+                $rootPath = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+                $OutputPath = Join-Path $rootPath "Reports"
+                Write-Verbose "Using source script reports path: $OutputPath"
+            } else {
+                # Bundled executable mode - use current directory Reports folder
+                $currentDir = Get-Location
+                $OutputPath = Join-Path $currentDir "Reports"
+                if (-not (Test-Path $currentDir -PathType Container)) {
+                    # Ultimate fallback to temp directory
+                    $OutputPath = Join-Path $env:TEMP "ESS_HealthCheck_Reports"
+                }
+                Write-Verbose "Using bundled executable reports path: $OutputPath"
+            }
         }
         
         # Create output directory if it doesn't exist
@@ -922,12 +935,27 @@ function New-TargetedHealthCheckReport {
         
         # Determine output path
         if (-not $OutputPath) {
-            # Use root-level Reports folder (two levels up from src/Core) - same as regular report
-            $rootPath = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-            $reportsPath = Join-Path $rootPath "Reports"
+            # Try to determine context and set appropriate path
+            if ($PSScriptRoot -and (Test-Path $PSScriptRoot)) {
+                # Source script mode - use root-level Reports folder (two levels up from src/Core)
+                $rootPath = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+                $reportsPath = Join-Path $rootPath "Reports"
+                Write-Verbose "Using source script reports path: $reportsPath"
+            } else {
+                # Bundled executable mode - use current directory Reports folder
+                $currentDir = Get-Location
+                $reportsPath = Join-Path $currentDir "Reports"
+                if (-not (Test-Path $currentDir -PathType Container)) {
+                    # Ultimate fallback to temp directory
+                    $reportsPath = Join-Path $env:TEMP "ESS_HealthCheck_Reports"
+                }
+                Write-Verbose "Using bundled executable reports path: $reportsPath"
+            }
+            
             Write-Verbose "Script root: $PSScriptRoot"
-            Write-Verbose "Project root: $rootPath"
+            Write-Verbose "Current location: $(Get-Location)"
             Write-Verbose "Reports path: $reportsPath"
+            
             if (-not (Test-Path $reportsPath)) {
                 New-Item -ItemType Directory -Path $reportsPath -Force | Out-Null
             }
