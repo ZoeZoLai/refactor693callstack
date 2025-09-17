@@ -155,6 +155,6 @@ function Test-SystemRequirements {
         }
     } else {
         # Client OS - show as INFO since ESS is designed for server deployment
-        Add-HealthCheckResult -Category "System Requirements" -Check "Operating System" -Status "INFO" -Message "Client OS detected: $osCaption. ESS is designed for server deployment, but health check can still run on client systems." -Manager $Manager
+        Add-HealthCheckResult -Category "System Requirements" -Check "Operating System" -Status "INFO" -Message "Client OS detected: $osCaption. ESS is designed for server deployment, but ESS can still run on client systems." -Manager $Manager
     }
 } 

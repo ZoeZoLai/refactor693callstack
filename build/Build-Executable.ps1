@@ -118,6 +118,15 @@ try {
         configFile = $false
     }
     
+    # Use myob.ico from icons folder
+    $iconPath = "icons\myob.ico"
+    if (Test-Path $iconPath) {
+        $ps2exeParams.iconFile = $iconPath
+        Write-Host "Using MYOB icon: $iconPath" -ForegroundColor Green
+    } else {
+        Write-Warning "MYOB icon not found at: $iconPath"
+    }
+    
     Write-Host "Converting with parameters:" -ForegroundColor Cyan
     $ps2exeParams.GetEnumerator() | ForEach-Object {
         Write-Host "  $($_.Key): $($_.Value)" -ForegroundColor Gray

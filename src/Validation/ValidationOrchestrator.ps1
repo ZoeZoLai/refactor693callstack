@@ -160,7 +160,7 @@ function Test-ESSAPIHealthCheckValidation {
         
         # Import the API health check functions (only needed in non-bundled context)
         # Check if we need to import modules based on whether functions are already available
-        if (-not (Get-Command -Name "Test-ESSAPIHealth" -ErrorAction SilentlyContinue)) {
+        if (-not (Get-Command -Name "Get-ESSHealthCheckViaAPI" -ErrorAction SilentlyContinue)) {
             # We're in source script mode, need to import the module
             $apiModulePath = Join-Path $PSScriptRoot "..\Detection\ESSHealthCheckAPI.ps1"
             if (Test-Path $apiModulePath) {

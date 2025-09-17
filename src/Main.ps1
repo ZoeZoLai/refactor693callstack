@@ -152,36 +152,53 @@ function Start-InteractiveESSHealthChecks {
         Write-Host "Step 3: Interactive instance selection..." -ForegroundColor Yellow
         $selectedInstances = Show-InstanceSelectionMenu -DetectionResults $detectionResults
         
+        # Step 4: Run validation checks (always run basic system validation for consistency)
+        Write-Host "Step 4: Running validation checks..." -ForegroundColor Yellow
+        
         if ($selectedInstances.ESSInstances.Count -eq 0 -and $selectedInstances.WFEInstances.Count -eq 0) {
-            Write-Host "No instances selected. Exiting interactive health check." -ForegroundColor Yellow
-            return $null
+            Write-Host "No instances selected. Running basic system validation only..." -ForegroundColor Yellow
+            # Run only basic system validation when no instances are selected
+            Start-SystemValidation -SystemInfo $systemInfo -DetectionResults $detectionResults -Manager $healthCheckManager -ValidationManager $validationManager
+            $essUrl = $null
+        } else {
+            # Get ESS URL for API health checks when instances are selected
+            Write-Host "Getting ESS URL configuration..." -ForegroundColor Yellow
+            $essUrl = Get-ESSURLInput -SelectedInstances $selectedInstances
+            
+            # Run selective validation checks for selected instances
+            Write-Host "Running selective validation checks..." -ForegroundColor Yellow
+            Start-SelectiveSystemValidation -SystemInfo $systemInfo -SelectedInstances $selectedInstances -OriginalDetectionResults $detectionResults -ESSUrl $essUrl -Manager $healthCheckManager -ValidationManager $validationManager
         }
         
-        # Step 4: Get ESS URL for API health checks
-        Write-Host "Step 4: ESS URL configuration..." -ForegroundColor Yellow
-        $essUrl = Get-ESSURLInput -SelectedInstances $selectedInstances
-        
-        # Step 5: Run selective validation checks
-        Write-Host "Step 5: Running selective validation checks..." -ForegroundColor Yellow
-        Start-SelectiveSystemValidation -SystemInfo $systemInfo -SelectedInstances $selectedInstances -OriginalDetectionResults $detectionResults -ESSUrl $essUrl -Manager $healthCheckManager -ValidationManager $validationManager
-        
-        # Step 6: Generate targeted report
-        Write-Host "Step 6: Generating targeted health check report..." -ForegroundColor Yellow
+        # Step 5: Generate report (always generate a report for consistency with automated mode)
+        Write-Host "Step 5: Generating health check report..." -ForegroundColor Yellow
         $results = Get-HealthCheckResults -Manager $healthCheckManager
-        $reportPath = New-TargetedHealthCheckReport -Results $results -SystemInfo $systemInfo -SelectedInstances $selectedInstances -OriginalDetectionResults $detectionResults -ESSUrl $essUrl -Manager $healthCheckManager
         
-        # Step 7: Display summary
+        if ($selectedInstances.ESSInstances.Count -eq 0 -and $selectedInstances.WFEInstances.Count -eq 0) {
+            # Generate standard report when no instances are selected
+            $reportPath = New-HealthCheckReport -Results $results -SystemInfo $systemInfo -DetectionResults $detectionResults -Manager $healthCheckManager
+        } else {
+            # Generate targeted report when instances are selected
+            $reportPath = New-TargetedHealthCheckReport -Results $results -SystemInfo $systemInfo -SelectedInstances $selectedInstances -OriginalDetectionResults $detectionResults -ESSUrl $essUrl -Manager $healthCheckManager
+        }
+        
+        # Step 6: Display summary
         Write-Host "`n=== Interactive Health Check Summary ===" -ForegroundColor Magenta
         Write-Host "System Information:" -ForegroundColor White
         Write-Host "  Computer Name: $($systemInfo.ComputerName)" -ForegroundColor White
         Write-Host "  OS Version: $($systemInfo.OS.Caption)" -ForegroundColor White
         Write-Host "  IIS Installed: $($systemInfo.IIS.IsInstalled)" -ForegroundColor White
         
-        Write-Host "Selected Instances:" -ForegroundColor White
-        Write-Host "  ESS Instances: $($selectedInstances.ESSInstances.Count)" -ForegroundColor White
-        Write-Host "  WFE Instances: $($selectedInstances.WFEInstances.Count)" -ForegroundColor White
-        if ($essUrl) {
-            Write-Host "  ESS URL for API: $essUrl" -ForegroundColor White
+        if ($selectedInstances.ESSInstances.Count -eq 0 -and $selectedInstances.WFEInstances.Count -eq 0) {
+            Write-Host "Validation Scope:" -ForegroundColor White
+            Write-Host "  Basic system validation only (no instances selected)" -ForegroundColor White
+        } else {
+            Write-Host "Selected Instances:" -ForegroundColor White
+            Write-Host "  ESS Instances: $($selectedInstances.ESSInstances.Count)" -ForegroundColor White
+            Write-Host "  WFE Instances: $($selectedInstances.WFEInstances.Count)" -ForegroundColor White
+            if ($essUrl) {
+                Write-Host "  ESS URL for API: $essUrl" -ForegroundColor White
+            }
         }
         
         $summary = Get-HealthCheckSummary -Manager $healthCheckManager

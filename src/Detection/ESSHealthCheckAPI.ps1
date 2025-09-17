@@ -57,6 +57,11 @@ function Get-ESSHealthCheckViaAPI {
     )
     
     try {
+        # Validate ApplicationPath parameter
+        if ([string]::IsNullOrEmpty($ApplicationPath)) {
+            throw "ApplicationPath parameter cannot be null or empty"
+        }
+        
         Write-Verbose "Getting ESS health check via API for $SiteName$ApplicationPath (Timeout: ${TimeoutSeconds}s, MaxRetries: $MaxRetries)"
         
         # Build URI for localhost
@@ -68,8 +73,16 @@ function Get-ESSHealthCheckViaAPI {
             Endpoint = "api/v1/healthcheck"
         }
         
+        # Handle root application case where TrimStart('/') results in empty string
+        if ([string]::IsNullOrEmpty($uriBuilder.Application)) {
+            $uriBuilder.Application = ""
+            $applicationPart = ""
+        } else {
+            $applicationPart = "/$($uriBuilder.Application)"
+        }
+        
         $portString = if ($uriBuilder.Port -ne 80 -and $uriBuilder.Port -ne 443) { ":$($uriBuilder.Port)" } else { "" }
-        $fullUri = "$($uriBuilder.Scheme)://$($uriBuilder.Host)$portString/$($uriBuilder.Application)/$($uriBuilder.Endpoint)"
+        $fullUri = "$($uriBuilder.Scheme)://$($uriBuilder.Host)$portString$applicationPart/$($uriBuilder.Endpoint)"
         
         Write-Verbose "Health check URI: $fullUri"
         
@@ -592,6 +605,17 @@ function Get-ESSHealthCheckForAllInstances {
         foreach ($ess in $essInstances) {
             Write-Host "Checking health for ESS instance: $($ess.SiteName)$($ess.ApplicationPath)" -ForegroundColor Gray
             
+            # Validate ESS instance data before proceeding
+            if ([string]::IsNullOrEmpty($ess.SiteName)) {
+                Write-Warning "Skipping ESS instance with empty SiteName"
+                continue
+            }
+            
+            if ([string]::IsNullOrEmpty($ess.ApplicationPath)) {
+                Write-Warning "Skipping ESS instance '$($ess.SiteName)' with empty ApplicationPath"
+                continue
+            }
+            
             try {
                 $healthCheck = Get-ESSHealthCheckViaAPI -SiteName $ess.SiteName -ApplicationPath $ess.ApplicationPath -TimeoutSeconds $TimeoutSeconds -MaxRetries $MaxRetries -RetryDelaySeconds $RetryDelaySeconds
                 
@@ -619,6 +643,11 @@ function Get-ESSHealthCheckForAllInstances {
                     Write-Warning "Error checking health for ESS instance $($ess.SiteName)$($ess.ApplicationPath): Request timed out after $TimeoutSeconds seconds with $MaxRetries retry attempts. This may indicate the ESS application is under heavy load or experiencing issues."
                 } elseif ($errorMessage -like "*404*" -or $errorMessage -like "*Not Found*") {
                     Write-Warning "Error checking health for ESS instance $($ess.SiteName)$($ess.ApplicationPath): Endpoint not found (404). This may indicate the ESS application is not properly configured or the API endpoint is not available."
+                } elseif ($errorMessage -like "*Cannot bind argument to parameter 'Path'*") {
+                    Write-Warning "Error checking health for ESS instance $($ess.SiteName)$($ess.ApplicationPath): Invalid ApplicationPath parameter. This indicates a configuration issue with the ESS instance detection."
+                } elseif ($errorMessage -like "*ApplicationPath parameter cannot be null or empty*") {
+                    Write-Warning "Error checking health for ESS instance $($ess.SiteName): ApplicationPath is null or empty. Skipping this instance."
+                    continue  # Skip creating a failed health check result for validation errors
                 } else {
                     Write-Warning "Error checking health for ESS instance $($ess.SiteName)$($ess.ApplicationPath): $errorMessage"
                 }
@@ -632,7 +661,7 @@ function Get-ESSHealthCheckForAllInstances {
                     Error = $_.Exception.Message
                     ESSInstance = @{
                         SiteName = $ess.SiteName
-                        ApplicationPath = $ess.ApplicationPath
+                        ApplicationPath = if ($ess.ApplicationPath) { $ess.ApplicationPath } else { "N/A" }
                         PhysicalPath = $ess.PhysicalPath
                         ApplicationPool = $ess.ApplicationPool
                         DatabaseServer = $ess.DatabaseServer

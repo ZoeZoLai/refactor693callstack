@@ -70,6 +70,7 @@ cd build
 - `-BundledScript "input-script.ps1"` - Input bundled script
 - `-SkipTest` - Skip syntax validation
 - `-InstallPS2EXE` - Install PS2EXE module if missing
+- `-IconFile "path\to\icon.ico"` - Custom icon file for the executable
 
 ## Build Outputs
 
@@ -111,6 +112,15 @@ cd build
 # Build to specific locations
 .\Build-BundledScript.ps1 -OutputFile "C:\Temp\MyHealthChecker.ps1"
 .\Build-Executable.ps1 -OutputExe "C:\Distribution\HealthChecker.exe"
+```
+
+### Building with Custom Icon
+```powershell
+# Build with custom icon
+.\Build-Executable.ps1 -IconFile "icons\ess-health-checker.ico"
+
+# Build with icon and custom location
+.\Build-Executable.ps1 -OutputExe "MyHealthChecker.exe" -IconFile "C:\path\to\icon.ico"
 ```
 
 ## Troubleshooting
