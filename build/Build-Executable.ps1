@@ -109,7 +109,7 @@ try {
         description = "MYOB PayGlobal ESS Health Check Tool"
         company = "MYOB"
         product = "ESS Health Checker"
-        copyright = "© $(Get-Date -Format yyyy) MYOB"
+        copyright = "$([char]0x00A9) $(Get-Date -Format yyyy) MYOB NZ Limited"
         version = "3.0.0.0"
         noConsole = $false  # Keep console for user interaction
         noOutput = $false   # Allow output
