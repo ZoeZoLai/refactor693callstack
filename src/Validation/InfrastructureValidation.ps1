@@ -207,9 +207,9 @@ function Test-SecurityPermissions {
     
     # Test if running as administrator
     if ($SystemInfo.IsElevated) {
-        Add-HealthCheckResult -Category "Security Permissions" -Check "Administrator Rights" -Status "PASS" -Message "Script is running with administrator privileges" -Manager $Manager
+        Add-HealthCheckResult -Category "Security Permissions" -Check "Administrator Rights" -Status "PASS" -Message "Tool is running with administrator privileges" -Manager $Manager
     } else {
-        Add-HealthCheckResult -Category "Security Permissions" -Check "Administrator Rights" -Status "WARNING" -Message "Script is not running with administrator privileges. Some checks may fail." -Manager $Manager
+        Add-HealthCheckResult -Category "Security Permissions" -Check "Administrator Rights" -Status "WARNING" -Message "Tool is not running with administrator privileges. Some checks may fail." -Manager $Manager
     }
     
     # Test file system permissions
