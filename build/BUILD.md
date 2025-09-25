@@ -190,3 +190,5 @@ Install-Module ps2exe -Force -Scope CurrentUser
 - **Purpose**: Installs all build dependencies
 - **Installs**: PS2EXE module for script-to-executable conversion
 - **Scope**: Current user (no admin required for module installation)
+
+## Test
