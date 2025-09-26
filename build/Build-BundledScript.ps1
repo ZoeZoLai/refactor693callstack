@@ -153,9 +153,6 @@ $bundledContent += @"
 # BUNDLED SCRIPT INITIALIZATION COMPLETE
 # ============================================================================
 
-Write-Host "Loading ESS Health Checker modules..." -ForegroundColor Yellow
-Write-Host "All modules loaded successfully!" -ForegroundColor Green
-
 # ============================================================================
 # BUNDLED EXECUTABLE CONFIGURATION
 # ============================================================================
