@@ -224,17 +224,32 @@ try {
     Write-Host "============================================================" -ForegroundColor Green
     Write-Host ""
     
-    # Check if we have a valid report path
-    if (`$reportPath -and (`$reportPath -is [string]) -and `$reportPath.Trim()) {
+    # Check if we have a valid report path (handle both string and array)
+    if (`$reportPath -and ((`$reportPath -is [string] -and `$reportPath.Trim()) -or (`$reportPath -is [array] -and `$reportPath.Count -gt 0))) {
         Write-Host "Report Location:" -ForegroundColor Cyan
-        Write-Host "   `$reportPath" -ForegroundColor White
+        # Handle display of report path (array or string)
+        if (`$reportPath -is [array]) {
+            # For arrays, find the latest report file to display
+            `$reportsDir = Join-Path (Get-Location) "Reports"
+            `$latestReport = Get-ChildItem -Path `$reportsDir -Filter "ESS_HealthCheck_Report_*.html" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            if (`$latestReport) {
+                Write-Host "   `$(`$latestReport.FullName)" -ForegroundColor White
+                `$displayPath = `$latestReport.FullName
+            } else {
+                Write-Host "   Report generated but file not found" -ForegroundColor Yellow
+                `$displayPath = `$null
+            }
+        } else {
+            Write-Host "   `$reportPath" -ForegroundColor White
+            `$displayPath = `$reportPath
+        }
         Write-Host ""
         
         # Check if report file exists and show additional options
-        if (Test-Path `$reportPath) {
+        if (`$displayPath -and (Test-Path `$displayPath)) {
             Write-Host "Next Steps:" -ForegroundColor Yellow
             Write-Host "   - Open report file to view detailed results" -ForegroundColor White
-            Write-Host "   - Copy report path: `$reportPath" -ForegroundColor Gray
+            Write-Host "   - Copy report path: `$displayPath" -ForegroundColor Gray
             Write-Host ""
             
             # Ask if user wants to open the report
@@ -243,8 +258,33 @@ try {
                 `$openChoice = Read-Host
                 if (`$openChoice -match '^[Yy]') {
                     Write-Host "Opening report..." -ForegroundColor Yellow
-                    Start-Process `$reportPath
-                    Start-Sleep -Seconds 2
+                    try {
+                        # Handle the case where reportPath might be an array
+                        if (`$reportPath -is [array]) {
+                            Write-Host "DEBUG: Report path is array, finding latest report file..." -ForegroundColor Magenta
+                            # Find the latest report file from the Reports directory
+                            `$reportsDir = Join-Path (Get-Location) "Reports"
+                            `$latestReport = Get-ChildItem -Path `$reportsDir -Filter "ESS_HealthCheck_Report_*.html" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+                            if (`$latestReport) {
+                                `$cleanReportPath = `$latestReport.FullName
+                                Write-Host "DEBUG: Found latest report: `$cleanReportPath" -ForegroundColor Magenta
+                            } else {
+                                throw "No report files found in Reports directory"
+                            }
+                        } else {
+                            # Handle string path
+                            `$cleanReportPath = `$reportPath.Trim()
+                            Write-Host "DEBUG: Clean path: '`$cleanReportPath'" -ForegroundColor Magenta
+                        }
+                        
+                        Write-Host "DEBUG: File exists: `$(Test-Path `$cleanReportPath)" -ForegroundColor Magenta
+                        Start-Process `$cleanReportPath
+                        Start-Sleep -Seconds 2
+                    } catch {
+                        Write-Host "Failed to open report automatically. You can manually open the report file at:" -ForegroundColor Yellow
+                        Write-Host "`$reportPath" -ForegroundColor White
+                        Write-Host "Error details: `$_" -ForegroundColor Red
+                    }
                 }
             } catch {
                 # Fallback if Read-Host fails

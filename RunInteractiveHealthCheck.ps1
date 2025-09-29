@@ -69,6 +69,7 @@ try {
             Write-Host "Starting automated health checks..." -ForegroundColor Yellow
             $reportPath = Start-ESSHealthChecks
             
+            
             Write-Host ""
             Write-Host "Health check completed successfully!" -ForegroundColor Green
             Write-Host "Report location: $reportPath" -ForegroundColor Cyan
@@ -78,6 +79,7 @@ try {
             Write-Host "Starting interactive health checks..." -ForegroundColor Yellow
             $reportPath = Start-InteractiveESSHealthChecks
             
+           
             Write-Host ""
             Write-Host "Health check completed successfully!" -ForegroundColor Green
             Write-Host "Report location: $reportPath" -ForegroundColor Cyan

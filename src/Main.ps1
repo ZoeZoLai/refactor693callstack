@@ -85,6 +85,11 @@ function Start-ESSHealthChecks {
         $results = Get-HealthCheckResults -Manager $healthCheckManager
         $reportPath = New-HealthCheckReport -Results $results -SystemInfo $systemInfo -DetectionResults $detectionResults -Manager $healthCheckManager
         
+        # Ensure we have a valid report path
+        if ([string]::IsNullOrWhiteSpace($reportPath)) {
+            throw "Failed to generate report - no report path returned"
+        }
+        
         # Step 5: Display summary
         Write-Host "`n=== Health Check Summary ===" -ForegroundColor Magenta
         Write-Host "System Information:" -ForegroundColor White
@@ -108,7 +113,9 @@ function Start-ESSHealthChecks {
         
         Write-Host "`nHealth Checks completed successfully!" -ForegroundColor Green
         Write-Host "Report generated at: $reportPath" -ForegroundColor Cyan
-        return $reportPath
+        
+        # Explicitly return only the report path
+        return $reportPath.Trim()
     } 
     catch {
         Write-Error "An error occurred during the ESS Health Check: $_"
@@ -182,6 +189,11 @@ function Start-InteractiveESSHealthChecks {
             $reportPath = New-TargetedHealthCheckReport -Results $results -SystemInfo $systemInfo -SelectedInstances $selectedInstances -OriginalDetectionResults $detectionResults -ESSUrl $essUrl -Manager $healthCheckManager
         }
         
+        # Ensure we have a valid report path
+        if ([string]::IsNullOrWhiteSpace($reportPath)) {
+            throw "Failed to generate report - no report path returned"
+        }
+        
         # Step 6: Display summary
         Write-Host "`n=== Interactive Health Check Summary ===" -ForegroundColor Magenta
         Write-Host "System Information:" -ForegroundColor White
@@ -212,7 +224,9 @@ function Start-InteractiveESSHealthChecks {
         
         Write-Host "`nInteractive Health Checks completed successfully!" -ForegroundColor Green
         Write-Host "Report generated at: $reportPath" -ForegroundColor Cyan
-        return $reportPath
+        
+        # Explicitly return only the report path
+        return $reportPath.Trim()
     } 
     catch {
         Write-Error "An error occurred during the Interactive ESS Health Check: $_"
